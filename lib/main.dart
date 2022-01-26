@@ -2,6 +2,9 @@ import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_15/drawer.dart';
+import 'package:flutter_15/settings.dart';
+import 'package:provider/provider.dart';
 
 import 'coord.dart';
 import 'puzzle_piece.dart';
@@ -22,12 +25,15 @@ class _MyAppState extends State<MyApp> {
   // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Flutter Demo',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
+    return ChangeNotifierProvider(
+      create: (_) => Settings(),
+      child: MaterialApp(
+        title: 'Flutter Puzzle Hack',
+        theme: ThemeData(
+          primarySwatch: Colors.blue,
+        ),
+        home: const MyHomePage(title: 'Flutter 15 Puzzle'),
       ),
-      home: const MyHomePage(title: 'Flutter 15 Puzzle'),
     );
   }
 }
@@ -76,12 +82,19 @@ class _MyHomePageState extends State<MyHomePage> {
   /// Whether the game is currently being randomized.
   bool _isRandomizing = false;
 
+  /// Whether the image is a picture vs the numbers
+  bool _isPhoto = false;
+
   /// Whether the proposed slide is safe.
   ///
   /// This assumes that the current puzzle is solved above and to the right of target.  Sometimes a proposed
   /// slide is not a legal move.
   bool _isSafeSlide({required Coordinate target, required Coordinate proposed}) =>
-      (proposed.y > target.y || proposed.x >= target.x) && proposed.y < 4 && proposed.x >= 0 && proposed.x < 4;
+      (proposed.y > target.y || proposed.x >= target.x) &&
+      proposed.y >= 0 &&
+      proposed.y < 4 &&
+      proposed.x >= 0 &&
+      proposed.x < 4;
 
   /// Generates a new coordinate to be used in a move.
   ///
@@ -92,8 +105,6 @@ class _MyHomePageState extends State<MyHomePage> {
   void _move(Coordinate pushedPiece) {
     assert(pushedPiece.x >= 0 && pushedPiece.x < 4);
     assert(pushedPiece.y >= 0 && pushedPiece.y < 4);
-
-    print('moving $pushedPiece');
 
     if (pushedPiece == _blank || (!pushedPiece.isSameColumn(_blank) && !pushedPiece.isSameRow(_blank))) {
       return;
@@ -143,7 +154,6 @@ class _MyHomePageState extends State<MyHomePage> {
       Square.fifteen.coordinate: 15,
       Square.sixteen.coordinate: null,
     })) {
-      print('won game');
       _isSolvedGame = true;
       _isSolvingGame = false;
     } else {
@@ -297,12 +307,10 @@ class _MyHomePageState extends State<MyHomePage> {
     }
 
     assert(targetLocation != null);
-    print('location is $targetLocation');
     return targetLocation!;
   }
 
   Future<void> _makeNextMove(Coordinate location, Coordinate target) async {
-    print('loc $location, target $target blank $_blank');
     Coordinate? movePiece;
     if (location == target) {
       return;
@@ -310,7 +318,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
     if (location.isSameRow(target)) {
       if (_blank.compare(isLeftOf: location, isSameRow: target)) {
-        movePiece = location;
+        movePiece = _newMove(x: location.x);
       } else if (_blank.compare(isBelow: location)) {
         if (_blank.x == location.x - 1) {
           movePiece = _newMove(y: location.y);
@@ -368,7 +376,6 @@ class _MyHomePageState extends State<MyHomePage> {
     }
 
     if (movePiece != null) {
-      print('auto move is $movePiece');
       await _autoMove(movePiece);
     }
   }
@@ -411,7 +418,26 @@ class _MyHomePageState extends State<MyHomePage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.title),
+        actions: [
+          IconButton(
+            onPressed: () {
+              setState(() {
+                _isPhoto = false;
+              });
+            },
+            icon: const Text('15'),
+          ),
+          IconButton(
+            onPressed: () {
+              setState(() {
+                _isPhoto = true;
+              });
+            },
+            icon: const Icon(Icons.photo_outlined),
+          ),
+        ],
       ),
+      drawer: const PuzzleDrawer(),
       body: Center(
         child: Container(
           width: width * 4,
@@ -427,7 +453,7 @@ class _MyHomePageState extends State<MyHomePage> {
                     key: ValueKey(_puzzle[key]),
                     top: key.y * width,
                     left: key.x * width,
-                    duration: _isRandomizing ? const Duration(milliseconds: 50) : const Duration(milliseconds: 190),
+                    duration: _isRandomizing ? const Duration(milliseconds: 50) : const Duration(milliseconds: 150),
                     child: GestureDetector(
                       onTap: () {
                         setState(() {
@@ -437,6 +463,7 @@ class _MyHomePageState extends State<MyHomePage> {
                       child: PuzzlePiece(
                         value: _puzzle[key],
                         size: width,
+                        usePhoto: _isPhoto,
                       ),
                     ),
                   ),
@@ -447,16 +474,13 @@ class _MyHomePageState extends State<MyHomePage> {
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
           if (_isSolvingGame) {
-            print('stop solve');
             setState(() {
               _isSolvingGame = false;
             });
           } else if (!_isSolvedGame) {
-            print('solve');
             _isSolvingGame = true;
             _solutionMove();
           } else {
-            print('randomize');
             await _randomize();
           }
         },
