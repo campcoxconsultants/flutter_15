@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import 'package:assets_audio_player/assets_audio_player.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_15/drawer.dart';
@@ -73,17 +74,18 @@ class _MyHomePageState extends State<MyHomePage> {
   /// Tracks the blank location.
   Coordinate _blank = Square.sixteen.coordinate;
 
-  /// Whether the game is currently solved
-  bool _isSolvedGame = true;
-
-  /// Whether the game is currently being auto solved
-  bool _isSolvingGame = false;
-
-  /// Whether the game is currently being randomized.
-  bool _isRandomizing = false;
+  /// Current state of the game
+  GameState _gameState = GameState.initial;
 
   /// Whether the image is a picture vs the numbers
   bool _isPhoto = false;
+
+  final _assetsAudioPlayer = AssetsAudioPlayer();
+
+  @override
+  initState() {
+    super.initState();
+  }
 
   /// Whether the proposed slide is safe.
   ///
@@ -102,7 +104,7 @@ class _MyHomePageState extends State<MyHomePage> {
   Coordinate _newMove({int? x, int? y}) => Coordinate(x: x ?? _blank.x, y: y ?? _blank.y);
 
   /// Slides one or more tiles towards [_blank]
-  void _move(Coordinate pushedPiece) {
+  void _move(Coordinate pushedPiece) async {
     assert(pushedPiece.x >= 0 && pushedPiece.x < 4);
     assert(pushedPiece.y >= 0 && pushedPiece.y < 4);
 
@@ -135,7 +137,7 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   /// Checks if the puzzle to see if it is solved and sets correct variables
-  _checkForWin() {
+  _checkForWin() async {
     if (mapEquals(_puzzle, {
       Square.one.coordinate: 1,
       Square.two.coordinate: 2,
@@ -154,10 +156,17 @@ class _MyHomePageState extends State<MyHomePage> {
       Square.fifteen.coordinate: 15,
       Square.sixteen.coordinate: null,
     })) {
-      _isSolvedGame = true;
-      _isSolvingGame = false;
-    } else {
-      _isSolvedGame = false;
+      _gameState = GameState.gameWon;
+
+      await _assetsAudioPlayer.open(
+        Audio('assets/winner.wav'),
+        autoStart: true,
+      );
+
+      await Future.delayed(const Duration(seconds: 3));
+      setState(() {
+        _gameState = GameState.initial;
+      });
     }
   }
 
@@ -165,14 +174,16 @@ class _MyHomePageState extends State<MyHomePage> {
     assert(move.compare(isSameRow: _blank, isDifferentColumn: _blank) ||
         move.compare(isDifferentRow: _blank, isSameColumn: _blank));
 
-    if (!(_isSolvingGame || _isRandomizing)) {
+    if (_gameState != GameState.autoSolving && _gameState != GameState.randomizing) {
       return;
     }
     _move(move);
     await Future.delayed(duration);
   }
 
-  _solutionMove() async {
+  Future<void> _solutionMove() async {
+    _gameState = GameState.autoSolving;
+
     await _solveTarget(piece: 1, target: Square.one.coordinate);
     await _solveTarget(piece: 2, target: Square.two.coordinate);
     await _solveTarget(piece: 3, target: Square.three.coordinate);
@@ -217,7 +228,7 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   Future<bool> _solveTarget({required int piece, required Coordinate target}) async {
-    while (_isSolvingGame && _puzzle[target] != piece) {
+    while (_gameState == GameState.autoSolving && _puzzle[target] != piece) {
       await _makeNextMove(_findTile(piece), target);
     }
     return true;
@@ -383,7 +394,7 @@ class _MyHomePageState extends State<MyHomePage> {
   Future<void> _randomize() async {
     final random = Random();
 
-    _isRandomizing = true;
+    _gameState = GameState.randomizing;
 
     for (int i = 0; i < 40; i++) {
       int next = random.nextInt(4);
@@ -406,8 +417,41 @@ class _MyHomePageState extends State<MyHomePage> {
     }
 
     setState(() {
-      _isRandomizing = false;
+      _gameState = GameState.activeGame;
     });
+  }
+
+  void _stopSolve() {
+    setState(() {
+      _gameState = GameState.activeGame;
+    });
+  }
+
+  VoidCallback? _getFabAction() {
+    switch (_gameState) {
+      case GameState.initial:
+      case GameState.gameWon:
+        return _randomize;
+      case GameState.activeGame:
+        return _solutionMove;
+      case GameState.autoSolving:
+        return _stopSolve;
+      case GameState.randomizing:
+        return null;
+    }
+  }
+
+  Widget _getFabLabel() {
+    switch (_gameState) {
+      case GameState.initial:
+      case GameState.gameWon:
+      case GameState.randomizing:
+        return const Text('New');
+      case GameState.activeGame:
+        return const Text('Solve');
+      case GameState.autoSolving:
+        return const Text('Stop');
+    }
   }
 
   @override
@@ -453,7 +497,9 @@ class _MyHomePageState extends State<MyHomePage> {
                     key: ValueKey(_puzzle[key]),
                     top: key.y * width,
                     left: key.x * width,
-                    duration: _isRandomizing ? const Duration(milliseconds: 50) : const Duration(milliseconds: 150),
+                    duration: _gameState == GameState.randomizing
+                        ? const Duration(milliseconds: 50)
+                        : const Duration(milliseconds: 150),
                     child: GestureDetector(
                       onTap: () {
                         setState(() {
@@ -467,30 +513,51 @@ class _MyHomePageState extends State<MyHomePage> {
                       ),
                     ),
                   ),
+              if (_isPhoto)
+                AnimatedOpacity(
+                  // If the widget is visible, animate to 0.0 (invisible).
+                  // If the widget is hidden, animate to 1.0 (fully visible).
+                  opacity: _gameState == GameState.gameWon ? 1.0 : 0.0,
+                  duration: const Duration(milliseconds: 500),
+                  // The green box must be a child of the AnimatedOpacity widget.
+                  child: _buildFullSizeImage(width * 4),
+                )
             ],
           ),
         ),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () async {
-          if (_isSolvingGame) {
-            setState(() {
-              _isSolvingGame = false;
-            });
-          } else if (!_isSolvedGame) {
-            _isSolvingGame = true;
-            _solutionMove();
-          } else {
-            await _randomize();
-          }
-        },
+        onPressed: _getFabAction(),
         tooltip: 'Start',
-        child: _isSolvingGame
-            ? const Text('Stop')
-            : _isSolvedGame
-                ? const Text('New')
-                : const Text('Solve'),
+        child: _getFabLabel(),
       ), // This trailing comma makes auto-formatting nicer for build methods.
     );
   }
+
+  Widget _buildFullSizeImage(width) {
+    final settings = context.watch<Settings>();
+    if (settings.imageFile != null) {
+      return Image.network(
+        settings.imageFile!.path,
+        width: width,
+        height: width,
+        fit: BoxFit.cover,
+      );
+    } else {
+      return Image.asset(
+        'assets/family.jpg',
+        width: width,
+        height: width,
+        fit: BoxFit.cover,
+      );
+    }
+  }
+}
+
+enum GameState {
+  initial,
+  randomizing,
+  activeGame,
+  autoSolving,
+  gameWon,
 }

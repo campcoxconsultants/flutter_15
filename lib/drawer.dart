@@ -11,7 +11,7 @@ class PuzzleDrawer extends StatefulWidget {
 }
 
 class _PuzzleDrawerState extends State<PuzzleDrawer> {
-  double foo = 2;
+  bool bar = true;
   _pickImage() async {
     final ImagePicker picker = ImagePicker();
 
@@ -34,6 +34,8 @@ class _PuzzleDrawerState extends State<PuzzleDrawer> {
 
   @override
   Widget build(BuildContext context) {
+    final settings = context.watch<Settings>();
+
     return Drawer(
       child: ListView(
         padding: EdgeInsets.zero,
@@ -46,6 +48,7 @@ class _PuzzleDrawerState extends State<PuzzleDrawer> {
           ),
           ListTile(
             title: const Text('Select Photo'),
+            trailing: _buildSmallSizeImage(),
             onTap: () {
               _pickImage();
             },
@@ -56,26 +59,57 @@ class _PuzzleDrawerState extends State<PuzzleDrawer> {
                 const Text('Solve Speed'),
                 Expanded(
                   child: Slider.adaptive(
-                      value: foo,
-                      min: 1,
-                      max: 3,
-                      divisions: 2,
-                      onChanged: (newValue) {
-                        setState(() {
-                          foo = newValue;
-                          print('foo $foo');
-                        });
-                      }),
+                    value: settings.speed.toDouble(),
+                    min: 1,
+                    max: 3,
+                    divisions: 2,
+                    onChanged: (newValue) {
+                      settings.speed = newValue.toInt();
+                    },
+                  ),
                 ),
               ],
             ),
-            onTap: () {
-              // Update the state of the app.
-              // ...
-            },
+          ),
+          ListTile(
+            title: const Text('Play Sounds'),
+            trailing: Checkbox(
+              value: settings.playSounds,
+              onChanged: (newValue) {
+                settings.playSounds = !settings.playSounds;
+              },
+            ),
+          ),
+          ListTile(
+            title: const Text('Teaching Mode'),
+            trailing: Checkbox(
+              value: settings.teachingMode,
+              onChanged: (newValue) {
+                settings.teachingMode = !settings.teachingMode;
+              },
+            ),
           ),
         ],
       ),
     );
+  }
+
+  Widget _buildSmallSizeImage() {
+    final settings = context.watch<Settings>();
+    if (settings.imageFile != null) {
+      return Image.network(
+        settings.imageFile!.path,
+        width: 50,
+        height: 50,
+        fit: BoxFit.cover,
+      );
+    } else {
+      return Image.asset(
+        'assets/family.jpg',
+        width: 50,
+        height: 50,
+        fit: BoxFit.cover,
+      );
+    }
   }
 }

@@ -8,4 +8,25 @@ class Settings extends ChangeNotifier {
     _imageFile = newImage;
     notifyListeners();
   }
+
+  int _speed = 2;
+  int get speed => _speed;
+  set speed(int newSpeed) {
+    _speed = newSpeed;
+    notifyListeners();
+  }
+
+  bool _playSounds = true;
+  bool get playSounds => _playSounds;
+  set playSounds(bool newPlaySounds) {
+    _playSounds = newPlaySounds;
+    notifyListeners();
+  }
+
+  bool _teachingMode = false;
+  bool get teachingMode => _teachingMode;
+  set teachingMode(bool newTeachingMode) {
+    _teachingMode = newTeachingMode;
+    notifyListeners();
+  }
 }
