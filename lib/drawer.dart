@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_15/image.dart';
 import 'package:flutter_15/settings.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:provider/src/provider.dart';
+import 'package:provider/provider.dart';
 
 class PuzzleDrawer extends StatefulWidget {
   const PuzzleDrawer({Key? key}) : super(key: key);
@@ -22,12 +23,12 @@ class _PuzzleDrawerState extends State<PuzzleDrawer> {
 
       setState(() {
         final settings = context.read<Settings>();
-        settings.imageFile = imageFile;
+        settings.imageFilePath = imageFile?.path;
       });
     } catch (e) {
       setState(() {
         final settings = context.read<Settings>();
-        settings.imageFile = null;
+        settings.imageFilePath = null;
       });
     }
   }
@@ -48,7 +49,9 @@ class _PuzzleDrawerState extends State<PuzzleDrawer> {
           ),
           ListTile(
             title: const Text('Select Photo'),
-            trailing: _buildSmallSizeImage(),
+            trailing: const ImageFromSource(
+              width: 50,
+            ),
             onTap: () {
               _pickImage();
             },
@@ -56,15 +59,15 @@ class _PuzzleDrawerState extends State<PuzzleDrawer> {
           ListTile(
             title: Row(
               children: [
-                const Text('Solve Speed'),
+                const Text('Move Speed'),
                 Expanded(
                   child: Slider.adaptive(
-                    value: settings.speed.toDouble(),
-                    min: 1,
-                    max: 3,
+                    value: 3 - settings.speed.toDouble(),
+                    min: 0,
+                    max: 2,
                     divisions: 2,
                     onChanged: (newValue) {
-                      settings.speed = newValue.toInt();
+                      settings.speed = 3 - newValue.toInt();
                     },
                   ),
                 ),
@@ -89,27 +92,16 @@ class _PuzzleDrawerState extends State<PuzzleDrawer> {
               },
             ),
           ),
+          ListTile(
+            title: const Text('Reset Settings'),
+            onTap: () {
+              final settings = context.read<Settings>();
+
+              settings.resetSettings();
+            },
+          ),
         ],
       ),
     );
-  }
-
-  Widget _buildSmallSizeImage() {
-    final settings = context.watch<Settings>();
-    if (settings.imageFile != null) {
-      return Image.network(
-        settings.imageFile!.path,
-        width: 50,
-        height: 50,
-        fit: BoxFit.cover,
-      );
-    } else {
-      return Image.asset(
-        'assets/family.jpg',
-        width: 50,
-        height: 50,
-        fit: BoxFit.cover,
-      );
-    }
   }
 }

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_15/image.dart';
 import 'package:flutter_15/settings.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:provider/src/provider.dart';
+import 'package:provider/provider.dart';
 
 class PuzzlePiece extends StatelessWidget {
   const PuzzlePiece({
@@ -64,27 +64,9 @@ class PuzzlePiece extends StatelessWidget {
         child: SizedBox(
           width: size * 4,
           height: size * 4,
-          child: settings.imageFile == null ? _buildFromAsset() : _buildImage(settings.imageFile!),
+          child: ImageFromSource(width: size * 4),
         ),
       ),
-    );
-  }
-
-  Widget _buildFromAsset() {
-    return Image.asset(
-      'assets/family.jpg',
-      width: size * 4,
-      height: size * 4,
-      fit: BoxFit.cover,
-    );
-  }
-
-  Widget _buildImage(XFile file) {
-    return Image.network(
-      file.path,
-      width: size * 4,
-      height: size * 4,
-      fit: BoxFit.cover,
     );
   }
 }

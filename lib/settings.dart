@@ -1,11 +1,28 @@
-import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
+import 'package:flutter/foundation.dart';
+import 'package:localstorage/localstorage.dart';
 
 class Settings extends ChangeNotifier {
-  XFile? _imageFile;
-  XFile? get imageFile => _imageFile;
-  set imageFile(XFile? newImage) {
-    _imageFile = newImage;
+  Settings() {
+    _localStorage.ready.then(
+      (isSuccessful) {
+        if (isSuccessful) {
+          _loadSettings();
+        }
+      },
+    );
+  }
+
+  final LocalStorage _localStorage = LocalStorage('puzzle_15');
+  bool _hasLocalStorage = false;
+
+  // TODO: save bytes if web and filename if other
+  /// Whether there is a custom picture file
+  bool get hasImageFile => _imageFilePath != null;
+  String? _imageFilePath;
+  String? get imageFilePath => _imageFilePath;
+  set imageFilePath(String? newImage) {
+    _imageFilePath = newImage;
+    _saveSetting(key: 'imageFilePath', value: newImage);
     notifyListeners();
   }
 
@@ -13,6 +30,7 @@ class Settings extends ChangeNotifier {
   int get speed => _speed;
   set speed(int newSpeed) {
     _speed = newSpeed;
+    _saveSetting(key: 'speed', value: newSpeed);
     notifyListeners();
   }
 
@@ -20,6 +38,7 @@ class Settings extends ChangeNotifier {
   bool get playSounds => _playSounds;
   set playSounds(bool newPlaySounds) {
     _playSounds = newPlaySounds;
+    _saveSetting(key: 'playSounds', value: newPlaySounds);
     notifyListeners();
   }
 
@@ -27,6 +46,38 @@ class Settings extends ChangeNotifier {
   bool get teachingMode => _teachingMode;
   set teachingMode(bool newTeachingMode) {
     _teachingMode = newTeachingMode;
+    _saveSetting(key: 'teachingMode', value: newTeachingMode);
     notifyListeners();
+  }
+
+  // TODO: slide vs tap
+  Future<void> resetSettings() async {
+    await _localStorage.clear();
+
+    _loadSettings();
+  }
+
+  void _loadSettings() {
+    _playSounds = _localStorage.getItem('playSounds') ?? true;
+    _teachingMode = _localStorage.getItem('teachingMode') ?? false;
+    _speed = _localStorage.getItem('speed') ?? 2;
+
+    if (kIsWeb) {
+      _imageFilePath = null;
+    } else {
+      _imageFilePath = _localStorage.getItem('imageFilePath');
+    }
+
+    _hasLocalStorage = true;
+
+    notifyListeners();
+  }
+
+  void _saveSetting({required String key, required dynamic value}) {
+    if (!_hasLocalStorage) {
+      return;
+    }
+
+    _localStorage.setItem(key, value);
   }
 }
