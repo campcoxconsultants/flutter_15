@@ -21,14 +21,15 @@ class ImageFromSource extends StatelessWidget {
 
     if (settings.hasImageFile) {
       if (kIsWeb) {
-        // TODO: use bytes vs network
-        return Image.network(
-          settings.imageFilePath!,
+        assert(settings.imageFileBytes != null);
+        return Image.memory(
+          settings.imageFileBytes!,
           width: width,
           height: width,
           fit: BoxFit.cover,
         );
       } else {
+        assert(settings.imageFilePath != null);
         return Image.file(
           File(settings.imageFilePath!),
           width: width,

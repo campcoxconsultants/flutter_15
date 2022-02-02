@@ -19,16 +19,20 @@ class _PuzzleDrawerState extends State<PuzzleDrawer> {
     try {
       XFile? imageFile = await picker.pickImage(
         source: ImageSource.gallery,
+        imageQuality: 90,
+        maxWidth: 1440,
+        maxHeight: 1440,
       );
 
       setState(() {
         final settings = context.read<Settings>();
-        settings.imageFilePath = imageFile?.path;
+        assert(imageFile != null);
+        settings.setImageFile(imageFile!);
       });
     } catch (e) {
       setState(() {
         final settings = context.read<Settings>();
-        settings.imageFilePath = null;
+        settings.setImageFile(null);
       });
     }
   }
@@ -62,12 +66,12 @@ class _PuzzleDrawerState extends State<PuzzleDrawer> {
                 const Text('Move Speed'),
                 Expanded(
                   child: Slider.adaptive(
-                    value: 3 - settings.speed.toDouble(),
+                    value: 3 - settings.moveSpeed.toDouble(),
                     min: 0,
                     max: 2,
                     divisions: 2,
                     onChanged: (newValue) {
-                      settings.speed = 3 - newValue.toInt();
+                      settings.moveSpeed = 3 - newValue.toInt();
                     },
                   ),
                 ),
@@ -77,18 +81,27 @@ class _PuzzleDrawerState extends State<PuzzleDrawer> {
           ListTile(
             title: const Text('Play Sounds'),
             trailing: Checkbox(
-              value: settings.playSounds,
+              value: settings.isPlayingSounds,
               onChanged: (newValue) {
-                settings.playSounds = !settings.playSounds;
+                settings.isPlayingSounds = !settings.isPlayingSounds;
               },
             ),
           ),
           ListTile(
             title: const Text('Teaching Mode'),
             trailing: Checkbox(
-              value: settings.teachingMode,
+              value: settings.isTeachingMode,
               onChanged: (newValue) {
-                settings.teachingMode = !settings.teachingMode;
+                settings.isTeachingMode = !settings.isTeachingMode;
+              },
+            ),
+          ),
+          ListTile(
+            title: const Text('Slide Mode'),
+            trailing: Checkbox(
+              value: settings.isSliding,
+              onChanged: (newValue) {
+                settings.isSliding = !settings.isSliding;
               },
             ),
           ),

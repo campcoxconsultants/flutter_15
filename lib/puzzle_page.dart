@@ -55,7 +55,7 @@ class _FlutterPuzzlePageState extends State<FlutterPuzzlePage> {
   void engineListener() {
     final settings = context.read<Settings>();
     if (!_isDisplayingWin && _gameEngine.gameState == GameState.gameWon) {
-      if (settings.playSounds) {
+      if (settings.isPlayingSounds) {
         _assetsAudioPlayer.play();
       }
 
@@ -111,7 +111,7 @@ class _FlutterPuzzlePageState extends State<FlutterPuzzlePage> {
     }
 
     final settings = context.read<Settings>();
-    return Duration(milliseconds: 150 * settings.speed);
+    return Duration(milliseconds: 150 * settings.moveSpeed);
   }
 
   @override
