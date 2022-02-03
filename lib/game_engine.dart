@@ -5,8 +5,8 @@ import 'package:flutter/foundation.dart';
 import 'coord.dart';
 import 'square.dart';
 
-// TODO: Dartdoc
 // TODO: Teaching mode
+/// Handles the business logic of the game.
 class GameEngine extends ChangeNotifier {
   /// Represents the state of a completed puzzle.
   static final _completedPuzzle = {
@@ -42,9 +42,9 @@ class GameEngine extends ChangeNotifier {
 
   /// Represents the current state of the puzzle.
   ///
-  /// Each [Coordinate] maps to the number shown in that square.  The blank square maps to null.
+  /// Each [Coordinate] maps to the number shown in that square.
+  /// The blank square maps to null.
   Map<Coordinate, int?> get puzzle => _puzzle;
-
   final Map<Coordinate, int?> _puzzle;
 
   /// Tracks the blank location.
@@ -113,13 +113,14 @@ class GameEngine extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Checks if the puzzle to see if it is solved and sets correct variables
-  _checkForWin() async {
+  /// Checks the puzzle to see if it is solved and sets correct variables
+  _checkForWin() {
     if (mapEquals(_puzzle, _completedPuzzle)) {
       _gameState = GameState.gameWon;
     }
   }
 
+  /// Performs move and waits until time for next move
   _autoMove(Coordinate newMove, {Duration? duration}) async {
     assert(newMove.compare(isSameRow: _blank, isDifferentColumn: _blank) ||
         newMove.compare(isDifferentRow: _blank, isSameColumn: _blank));
@@ -132,6 +133,7 @@ class GameEngine extends ChangeNotifier {
     await Future.delayed(duration ?? Duration(milliseconds: 200 * _speedFactor));
   }
 
+  /// Generates automatic moves until the puzzle is solved.
   Future<void> solutionMove() async {
     _gameState = GameState.autoSolving;
 
@@ -178,13 +180,20 @@ class GameEngine extends ChangeNotifier {
     await _solveTarget(piece: 15, target: Square.fifteen.coordinate);
   }
 
-  Future<bool> _solveTarget({required int piece, required Coordinate target}) async {
+  /// Generates 0 or more automatic moves until the piece
+  /// has been moved to the target square.
+  ///
+  /// Note: there are cases where the target square is not the
+  /// same as the solved puzzle.
+  Future<void> _solveTarget({required int piece, required Coordinate target}) async {
     while (_gameState == GameState.autoSolving && _puzzle[target] != piece) {
       await _makeNextMove(_findTile(piece), target);
     }
-    return true;
   }
 
+  /// Moves a piece located at x, y+1 (where x is the right hand side)
+  /// into the target location while leaving the already solved pieces
+  /// in place.
   Future<void> _rotateEnd(Coordinate target) async {
     if (_blank.x != target.x - 2) {
       await _autoMove(_newMove(x: target.x - 2));
@@ -204,6 +213,13 @@ class GameEngine extends ChangeNotifier {
     await _autoMove(_newMove(y: target.y + 1));
   }
 
+  /// Moves bottom left pieces into order.
+  ///
+  /// The solving algorithm puts the two vertical pieces next to each other
+  /// on the top row (x, y-1) and (x + 1, y) into their correct places.
+  /// Eg. for a 4x4 puzzle, the first two squares of the third row are 13 and 9,
+  /// and after this, they are in their correct places, then this is repeated
+  /// for 14 and 10.
   Future<void> _rotateBottomStart({required Coordinate target}) async {
     if (_blank.y != target.y + 1) {
       await _autoMove(_newMove(y: target.y + 1));
@@ -218,6 +234,13 @@ class GameEngine extends ChangeNotifier {
     await _autoMove(_newMove(x: target.x + 1));
   }
 
+  /// Solves issue in the bottom left corner which can't be solved
+  /// by the algorithm.
+  ///
+  /// The solving algorithm places two vertical pieces next each other.
+  /// There is the possibility that the lower number is below the larger
+  /// number (eg 9 is at (0,3) and 13 is at (0,2) - or the blank is
+  /// (0,3) and and 9 is (1,3).
   Future<void> _unhideCorner({required Coordinate target}) async {
     if (_blank.y != target.y) {
       await _autoMove(_newMove(y: target.y));
@@ -256,10 +279,9 @@ class GameEngine extends ChangeNotifier {
     await _autoMove(_newMove(x: target.x + 1));
   }
 
+  /// Determines the coordinates where a tile is currently.
   Coordinate _findTile(int targetTile) {
     Coordinate? targetLocation;
-
-    _puzzle.forEach((key, value) {});
 
     for (final Coordinate key in _puzzle.keys) {
       if (_puzzle[key] == targetTile) {
@@ -272,12 +294,24 @@ class GameEngine extends ChangeNotifier {
     return targetLocation!;
   }
 
+  /// Automoves the next move according to the algorithm.
+  ///
+  /// The basic plan is to move the piece into position if it is
+  /// in the correct row or column. Otherwise, move the piece to
+  /// the correct column.
+  ///
+  /// It is assumed that the puzzle is solved for all rows above
+  /// target and all columns to the left of target in the target row.
+  ///
+  /// Note there are cases where a sequence of moves are needed
+  /// when the algorithm would basically not work.
   Future<void> _makeNextMove(Coordinate location, Coordinate target) async {
     Coordinate? movePiece;
     if (location == target) {
       return;
     }
 
+    // TODO: Break into smaller methods
     if (location.isSameRow(target)) {
       if (_blank.compare(isLeftOf: location, isSameRow: target)) {
         movePiece = _newMove(x: location.x);
@@ -340,6 +374,7 @@ class GameEngine extends ChangeNotifier {
     await _autoMove(movePiece);
   }
 
+  /// Shuffles the board and starts a new game
   Future<void> randomize() async {
     final random = Random();
 
@@ -370,10 +405,23 @@ class GameEngine extends ChangeNotifier {
   }
 }
 
+/// States a game can be in
 enum GameState {
+  /// The initial state where the puzzle is solved and ready to
+  /// start a game
   initial,
+
+  /// The game is currently shuffling pieces to start a new game
   randomizing,
+
+  /// The game is in progress with the user making moves
   activeGame,
+
+  /// The app is currently automatically solving the game
   autoSolving,
+
+  /// A temporary state where the game has been won.
+  ///
+  /// After any winning display, this is changed back to initial.
   gameWon,
 }
