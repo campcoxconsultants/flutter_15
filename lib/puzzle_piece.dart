@@ -1,19 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_15/image.dart';
 import 'package:flutter_15/settings.dart';
-import 'package:provider/provider.dart';
 
 class PuzzlePiece extends StatelessWidget {
   const PuzzlePiece({
     Key? key,
     this.value,
     required this.size,
+    required this.settings,
     this.usePhoto = false,
   }) : super(key: key);
 
   final int? value;
   final double size;
   final bool usePhoto;
+  final Settings settings;
 
   double _getAlign(int value) {
     switch (value) {
@@ -32,17 +33,15 @@ class PuzzlePiece extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final settings = context.watch<Settings>();
-
     return Container(
       decoration: BoxDecoration(
         border: Border.all(),
       ),
-      child: _buildDisplay(settings),
+      child: _buildDisplay(),
     );
   }
 
-  Widget _buildDisplay(Settings settings) {
+  Widget _buildDisplay() {
     if (!usePhoto) {
       return SizedBox(
         width: size,
@@ -64,7 +63,10 @@ class PuzzlePiece extends StatelessWidget {
         child: SizedBox(
           width: size * 4,
           height: size * 4,
-          child: ImageFromSource(width: size * 4),
+          child: ImageFromSource(
+            width: size * 4,
+            settings: settings,
+          ),
         ),
       ),
     );

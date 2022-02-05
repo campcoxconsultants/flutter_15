@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 
 import 'puzzle_page.dart';
 import 'settings.dart';
@@ -16,18 +15,15 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  // This widget is the root of your application.
+  final settings = Settings();
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => Settings(),
-      child: MaterialApp(
-        title: 'Flutter Puzzle Hack',
-        theme: ThemeData(
-          primarySwatch: Colors.blue,
-        ),
-        home: const FlutterPuzzlePage(title: 'Flutter 15 Puzzle'),
+    return MaterialApp(
+      title: 'Flutter Puzzle Hack',
+      theme: ThemeData(
+        primarySwatch: Colors.blue,
       ),
+      home: FlutterPuzzlePage(title: 'Flutter 15 Puzzle', settings: settings),
     );
   }
 }

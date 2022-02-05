@@ -15,6 +15,7 @@ class Settings extends ChangeNotifier {
   static const isSlidingKey = 'isSliding';
   static const isTeachingModeKey = 'teachingMode';
   static const isPlayingSoundsKey = 'playSounds';
+  static const isShowingStatusKey = "showStatus";
 
   Settings() {
     _localStorage.ready.then(
@@ -106,6 +107,19 @@ class Settings extends ChangeNotifier {
 
   bool _isTeachingMode = false;
 
+  /// Whether teaching mode is set for auto solve
+  bool get isShowingStatus => _isShowingStatus;
+  set isShowingStatus(bool newShowingStatus) {
+    _isShowingStatus = newShowingStatus;
+    _saveSetting(
+      key: isShowingStatusKey,
+      value: newShowingStatus,
+    );
+    notifyListeners();
+  }
+
+  bool _isShowingStatus = false;
+
   /// Whether moves are made by sliding (vs tapping)
   bool get isSliding => _isSliding;
   set isSliding(bool newTeachingMode) {
@@ -130,7 +144,7 @@ class Settings extends ChangeNotifier {
   void _loadSettings() {
     _isPlayingSounds = _localStorage.getItem(isPlayingSoundsKey) ?? true;
     _isTeachingMode = _localStorage.getItem(isTeachingModeKey) ?? false;
-    _isSliding = _localStorage.getItem(isSlidingKey) ?? false;
+    _isShowingStatus = _localStorage.getItem(isShowingStatusKey) ?? true;
     _moveSpeed = _localStorage.getItem(moveSpeedKey) ?? 2;
 
     _imageFilePath = _localStorage.getItem(imageFilePathKey);

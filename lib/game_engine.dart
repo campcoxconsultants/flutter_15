@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:flutter/foundation.dart';
 
 import 'coord.dart';
+import 'settings.dart';
 import 'square.dart';
 
 // TODO: Teaching mode
@@ -28,17 +29,9 @@ class GameEngine extends ChangeNotifier {
     Square.sixteen.coordinate: null,
   };
 
-  GameEngine() : _puzzle = Map<Coordinate, int?>.from(_completedPuzzle);
+  GameEngine({required this.settings}) : _puzzle = Map<Coordinate, int?>.from(_completedPuzzle);
 
-  /// Speed factor from settings.
-  ///
-  /// Since GameEngine doesn't have access to [Provider] (no `BuildContext`), this is not
-  /// updated automatically.
-  set speedFactor(int newSpeed) {
-    _speedFactor = newSpeed;
-  }
-
-  int _speedFactor = 2;
+  final Settings settings;
 
   /// Represents the current state of the puzzle.
   ///
@@ -59,6 +52,26 @@ class GameEngine extends ChangeNotifier {
   }
 
   GameState _gameState = GameState.initial;
+
+  /// Number of moves in current game
+  ///
+  /// This is not valid for initial and randomizing.
+  int get numberOfMoves => _numberOfMoves;
+  int _numberOfMoves = 0;
+
+  /// Elapsed time since a new game started.
+  ///
+  /// The timer stops when the game is solved.
+  Duration get elapsedTime => _stopwatch.elapsed;
+  final _stopwatch = Stopwatch();
+
+  /// The top level goal for auto solving
+  String? get solvingHeadline => _gameState == GameState.autoSolving ? _solvingHeadline : null;
+  String? _solvingHeadline;
+
+  /// List of reasons for current move.
+  List<String> get solvingDetails => _solvingDetails;
+  final List<String> _solvingDetails = [];
 
   /// Whether the proposed slide is safe.
   ///
@@ -108,6 +121,10 @@ class GameEngine extends ChangeNotifier {
       _blank = swap;
     }
 
+    if (_gameState != GameState.randomizing) {
+      _numberOfMoves++;
+    }
+
     _checkForWin();
 
     notifyListeners();
@@ -117,6 +134,7 @@ class GameEngine extends ChangeNotifier {
   _checkForWin() {
     if (mapEquals(_puzzle, _completedPuzzle)) {
       _gameState = GameState.gameWon;
+      _stopwatch.stop();
     }
   }
 
@@ -130,53 +148,75 @@ class GameEngine extends ChangeNotifier {
     }
     move(newMove, auto: true);
 
-    await Future.delayed(duration ?? Duration(milliseconds: 200 * _speedFactor));
+    final speedFactor = (settings.isTeachingMode && _gameState == GameState.autoSolving) ? 3 : 1;
+    await Future.delayed(
+      duration ?? Duration(milliseconds: 200 * settings.moveSpeed * speedFactor),
+    );
   }
 
   /// Generates automatic moves until the puzzle is solved.
   Future<void> solutionMove() async {
     _gameState = GameState.autoSolving;
 
+    _solvingHeadline = 'Solving Tile 1';
     await _solveTarget(piece: 1, target: Square.one.coordinate);
+    _solvingHeadline = 'Solving Tile 2';
     await _solveTarget(piece: 2, target: Square.two.coordinate);
+    _solvingHeadline = 'Solving Tile 3';
     await _solveTarget(piece: 3, target: Square.three.coordinate);
+    _solvingHeadline = 'Solving Tile 4';
     await _solveTarget(piece: 4, target: Square.four.coordinate);
+    _solvingHeadline = 'Solving Tile 5';
     await _solveTarget(piece: 5, target: Square.five.coordinate);
+    _solvingHeadline = 'Solving Tile 6';
     await _solveTarget(piece: 6, target: Square.six.coordinate);
+    _solvingHeadline = 'Solving Tile 7';
     await _solveTarget(piece: 7, target: Square.seven.coordinate);
+    _solvingHeadline = 'Solving Tile 8';
     await _solveTarget(piece: 8, target: Square.eight.coordinate);
 
     // if 9 & 13 are not already in place, solve them next to each other
     if (_puzzle[Square.nine.coordinate] != 9 || _puzzle[Square.thirteen.coordinate] != 13) {
+      _solvingHeadline = "Moving Tile 13 to 9's Square";
       await _solveTarget(piece: 13, target: Square.nine.coordinate);
 
       // Case where 9 and 13 are in opposite order
       if (_puzzle[Square.thirteen.coordinate] == 9 ||
           (_blank == Square.thirteen.coordinate && _puzzle[Square.fourteen.coordinate] == 9)) {
+        _solvingHeadline = 'Solving 9 and 13';
         await _unhideCorner(target: Square.thirteen.coordinate);
       } else {
+        _solvingHeadline = "Moving Tile 9 to 10's Square";
         await _solveTarget(piece: 9, target: Square.ten.coordinate);
 
+        _solvingHeadline = 'Solving 9 and 13';
         await _rotateBottomStart(target: Square.nine.coordinate);
       }
     }
 
     // if 10 & 14 are not already in place, solve them next to each other
     if (_puzzle[Square.ten.coordinate] != 10 || _puzzle[Square.fourteen.coordinate] != 14) {
+      _solvingHeadline = "Moving Tile 14 to 10's Square";
       await _solveTarget(piece: 14, target: Square.ten.coordinate);
       // Case where 10 and 14 are in opposite order
       if (_puzzle[Square.fourteen.coordinate] == 10 ||
           (_blank == Square.fourteen.coordinate && _puzzle[Square.fifteen.coordinate] == 10)) {
+        _solvingHeadline = "Solving 10 and 14";
         await _unhideCorner(target: Square.fourteen.coordinate);
       } else {
+        _solvingHeadline = "Moving Tile 10 to 11's Square";
         await _solveTarget(piece: 10, target: Square.eleven.coordinate);
 
+        _solvingHeadline = 'Solving 10 and 14';
         await _rotateBottomStart(target: Square.ten.coordinate);
       }
     }
 
+    _solvingHeadline = 'Solving Tile 11';
     await _solveTarget(piece: 11, target: Square.eleven.coordinate);
+    _solvingHeadline = 'Solving Tile 12';
     await _solveTarget(piece: 12, target: Square.twelve.coordinate);
+    _solvingHeadline = 'Solving Tile 15';
     await _solveTarget(piece: 15, target: Square.fifteen.coordinate);
   }
 
@@ -195,21 +235,37 @@ class GameEngine extends ChangeNotifier {
   /// into the target location while leaving the already solved pieces
   /// in place.
   Future<void> _rotateEnd(Coordinate target) async {
+    final targetPiece = _completedPuzzle[target]!;
+
+    _solvingDetails.clear();
+    _solvingDetails.insert(0, 'Perform end piece rotation');
+    // There is always a second element
+    _solvingDetails.insert(1, '');
+
     if (_blank.x != target.x - 2) {
+      _solvingDetails[1] = 'Make room to move ${targetPiece - 2} down';
       await _autoMove(_newMove(x: target.x - 2));
     }
+
+    _solvingDetails[1] = 'Move ${targetPiece - 2} down';
     await _autoMove(_newMove(y: target.y));
 
+    _solvingDetails[1] = 'Make room to move $targetPiece into place';
     await _autoMove(_newMove(x: target.x));
 
+    _solvingDetails[1] = 'Move $targetPiece into place';
     await _autoMove(_newMove(y: target.y + 1));
 
+    _solvingDetails[1] = 'Make room to remove incorrect piece';
     await _autoMove(_newMove(x: target.x - 1));
 
+    _solvingDetails[1] = 'Remove incorrect piece';
     await _autoMove(_newMove(y: target.y));
 
+    _solvingDetails[1] = 'Move ${targetPiece - 1} back in place';
     await _autoMove(_newMove(x: target.x - 2));
 
+    _solvingDetails[1] = 'Move ${targetPiece - 2} back in place';
     await _autoMove(_newMove(y: target.y + 1));
   }
 
@@ -221,16 +277,27 @@ class GameEngine extends ChangeNotifier {
   /// and after this, they are in their correct places, then this is repeated
   /// for 14 and 10.
   Future<void> _rotateBottomStart({required Coordinate target}) async {
+    final targetPiece = _completedPuzzle[target]!;
+
+    _solvingDetails.clear();
+    _solvingDetails.insert(0, 'Rotate $targetPiece and ${targetPiece + 4} into place');
+    // There is always a second element
+    _solvingDetails.insert(1, '');
+
     if (_blank.y != target.y + 1) {
+      _solvingDetails[1] = 'Move blank to bottom row';
       await _autoMove(_newMove(y: target.y + 1));
     }
 
     if (_blank.x != target.x) {
+      _solvingDetails[1] = 'Make room for ${targetPiece + 4}';
       await _autoMove(_newMove(x: target.x));
     }
 
+    _solvingDetails[1] = 'Move ${targetPiece + 4} into place';
     await _autoMove(_newMove(y: target.y));
 
+    _solvingDetails[1] = 'Move $targetPiece into place';
     await _autoMove(_newMove(x: target.x + 1));
   }
 
@@ -242,40 +309,65 @@ class GameEngine extends ChangeNotifier {
   /// number (eg 9 is at (0,3) and 13 is at (0,2) - or the blank is
   /// (0,3) and and 9 is (1,3).
   Future<void> _unhideCorner({required Coordinate target}) async {
+    final higherPiece = _completedPuzzle[target]!;
+    final lowerPiece = higherPiece - 4;
+
+    _solvingDetails.clear();
+    _solvingDetails.insert(0, 'Swap $lowerPiece and $higherPiece');
+    // There is always a second element
+    _solvingDetails.insert(1, '');
+
     if (_blank.y != target.y) {
+      _solvingDetails[1] = 'Make room to move $lowerPiece right';
       await _autoMove(_newMove(y: target.y));
     }
 
     if (_blank != target) {
+      _solvingDetails[1] = 'Move $lowerPiece right';
       await _autoMove(_newMove(x: target.x));
     }
 
+    _solvingDetails[1] = 'Move $higherPiece down';
     await _autoMove(_newMove(y: target.y - 1));
 
+    _solvingDetails[1] = 'Make room to move $lowerPiece up';
     await _autoMove(_newMove(x: target.x + 1));
 
+    _solvingDetails[1] = 'Move $lowerPiece up';
     await _autoMove(_newMove(y: target.y));
 
+    _solvingDetails[1] = 'Make room to move $higherPiece up';
+    _solvingDetails.add('Move blank to the right');
     await _autoMove(_newMove(x: target.x + 2));
 
+    _solvingDetails[2] = 'Move Blank up next to $lowerPiece';
     await _autoMove(_newMove(y: target.y - 1));
 
+    _solvingDetails.removeAt(2);
     await _autoMove(_newMove(x: target.x));
 
+    _solvingDetails[1] = 'Move $higherPiece up';
     await _autoMove(_newMove(y: target.y));
 
+    _solvingDetails[1] = 'Make room to move incorrect piece out of the way';
     await _autoMove(_newMove(x: target.x + 1));
 
+    _solvingDetails[1] = 'Move incorrect piece out of the way';
     await _autoMove(_newMove(y: target.y - 1));
 
+    _solvingDetails[1] = 'Move $lowerPiece left';
     await _autoMove(_newMove(x: target.x + 2));
 
+    _solvingDetails[1] = 'Move blank down';
     await _autoMove(_newMove(y: target.y));
 
+    _solvingDetails[1] = 'Make room to move $higherPiece down';
     await _autoMove(_newMove(x: target.x));
 
+    _solvingDetails[1] = 'Move $higherPiece down';
     await _autoMove(_newMove(y: target.y - 1));
 
+    _solvingDetails[1] = 'Move $lowerPiece left';
     await _autoMove(_newMove(x: target.x + 1));
   }
 
@@ -311,74 +403,127 @@ class GameEngine extends ChangeNotifier {
       return;
     }
 
-    // TODO: Break into smaller methods
+    _solvingDetails.clear();
+
     if (location.isSameRow(target)) {
-      if (_blank.compare(isLeftOf: location, isSameRow: target)) {
-        movePiece = _newMove(x: location.x);
-      } else if (_blank.compare(isBelow: location)) {
-        if (_blank.x == location.x - 1) {
-          movePiece = _newMove(y: location.y);
-        } else {
-          movePiece = _newMove(x: location.x - 1);
-        }
-      } else {
-        movePiece = _newMove(y: location.y + 1);
-      }
+      movePiece = _moveCorrectRow(location, target);
     } else if (location.compare(isSameColumn: target)) {
-      if (_blank.compare(isSameColumn: location, isAbove: location)) {
+      movePiece = await _moveCorrectColumn(location, target);
+    } else {
+      movePiece = _moveToCorrectColumn(location, target);
+    }
+
+    if (movePiece != null) {
+      await _autoMove(movePiece);
+    }
+  }
+
+  Coordinate _moveCorrectRow(Coordinate location, Coordinate target) {
+    Coordinate movePiece;
+    final targetPiece = _puzzle[location]!;
+
+    _solvingDetails.add('Move $targetPiece left');
+
+    // If blank is to the left, then move the piece
+    if (_blank.compare(isLeftOf: location, isSameRow: target)) {
+      movePiece = _newMove(x: location.x);
+    } else if (_blank.compare(isBelow: location)) {
+      if (_blank.x == location.x - 1) {
+        _solvingDetails.add('Make room to move $targetPiece left');
         movePiece = _newMove(y: location.y);
-      } else if (location.x == 3 && _blank != target && location == target + const Coordinate(x: 0, y: 1)) {
-        await _rotateEnd(target);
-        return;
-      } else if (_blank.compare(isAbove: location)) {
-        movePiece = _newMove(x: location.x);
-      } else if (_blank.compare(isSameColumn: location)) {
-        movePiece = _newMove(x: location.x == 3 ? 2 : location.x + 1);
-      } else if (_blank.compare(isRightOf: location) || (location.y - 1 > target.y || _blank.x > target.x)) {
-        movePiece = _newMove(y: location.y - 1);
-      } else if (_blank.compare(isSameRow: location)) {
-        movePiece = _newMove(y: location.y + 1);
       } else {
-        movePiece = _newMove(x: location.x == 3 ? 2 : location.x + 1);
+        _solvingDetails.add('Move blank to left of $targetPiece');
+        movePiece = _newMove(x: location.x - 1);
       }
     } else {
-      final isBlankCorrectDirection = (location.isLeftOf(_blank) && location.isLeftOf(target)) ||
-          (location.isRightOf(_blank) && location.isRightOf(target));
-      if (isBlankCorrectDirection) {
-        if (_blank.isSameRow(location)) {
-          movePiece = _newMove(x: location.x);
-        } else {
-          final shortMove = _newMove(y: location.y);
-          if (_isSafeSlide(target: target, proposed: shortMove)) {
-            movePiece = shortMove;
-          } else {
-            movePiece = _newMove(y: location.y + 1);
-          }
-        }
-      } else if (_blank.isSameColumn(location)) {
-        movePiece = _newMove(x: target.x);
+      _solvingDetails.add('Move blank around $targetPiece');
+      movePiece = _newMove(y: location.y + 1);
+    }
+
+    return movePiece;
+  }
+
+  Future<Coordinate?> _moveCorrectColumn(Coordinate location, Coordinate target) async {
+    Coordinate movePiece;
+
+    final targetPiece = _puzzle[location]!;
+    _solvingDetails.add('Move $targetPiece up');
+
+    if (_blank.compare(isSameColumn: location, isAbove: location)) {
+      movePiece = _newMove(y: location.y);
+    } else if (location.x == 3 && _blank != target && location == target + const Coordinate(x: 0, y: 1)) {
+      await _rotateEnd(target);
+      return null;
+    } else if (_blank.compare(isAbove: location)) {
+      _solvingDetails.add('Make room for $targetPiece');
+      movePiece = _newMove(x: location.x);
+    } else if (_blank.compare(isSameColumn: location)) {
+      _solvingDetails.add('Move blank around $targetPiece');
+      movePiece = _newMove(x: location.x == 3 ? 2 : location.x + 1);
+    } else if (_blank.compare(isRightOf: location) || (location.y - 1 > target.y || _blank.x > target.x)) {
+      _solvingDetails.add('Move blank to row above $targetPiece');
+      movePiece = _newMove(y: location.y - 1);
+    } else if (_blank.compare(isSameRow: location)) {
+      _solvingDetails.add('Make room for $targetPiece');
+      movePiece = _newMove(y: location.y + 1);
+    } else {
+      _solvingDetails.add('Move blank around $targetPiece');
+      movePiece = _newMove(x: location.x == 3 ? 2 : location.x + 1);
+    }
+    return movePiece;
+  }
+
+  Coordinate _moveToCorrectColumn(Coordinate location, Coordinate target) {
+    Coordinate movePiece;
+
+    final targetPiece = _puzzle[location]!;
+    final isTargetLeft = target.isLeftOf(location);
+    _solvingDetails.add('Move $targetPiece ' + (isTargetLeft ? 'Left' : 'Right'));
+
+    final isBlankCorrectDirection = (location.isLeftOf(_blank) && location.isLeftOf(target)) ||
+        (location.isRightOf(_blank) && location.isRightOf(target));
+    if (isBlankCorrectDirection) {
+      if (_blank.isSameRow(location)) {
+        movePiece = _newMove(x: location.x);
       } else {
-        final targetDirection = target.isLeftOf(location) ? -1 : 1;
-        final preferredMove = _newMove(x: location.x + targetDirection);
-        final alternateMove = _newMove(y: location.y - 1);
-        if (!_blank.isSameRow(location) && _isSafeSlide(target: target, proposed: preferredMove)) {
-          movePiece = preferredMove;
-        } else if (_isSafeSlide(target: target, proposed: alternateMove) && alternateMove != _blank) {
-          movePiece = alternateMove;
+        final shortMove = _newMove(y: location.y);
+        if (_isSafeSlide(target: target, proposed: shortMove)) {
+          _solvingDetails.add('Move blank above $targetPiece');
+          movePiece = shortMove;
         } else {
+          _solvingDetails.add('Move blank around $targetPiece');
           movePiece = _newMove(y: location.y + 1);
         }
       }
+    } else if (_blank.isSameColumn(location)) {
+      _solvingDetails.add('Make room for $targetPiece');
+      movePiece = _newMove(x: target.x);
+    } else {
+      final targetDirection = isTargetLeft ? -1 : 1;
+      final preferredMove = _newMove(x: location.x + targetDirection);
+      final alternateMove = _newMove(y: location.y - 1);
+      if (!_blank.isSameRow(location) && _isSafeSlide(target: target, proposed: preferredMove)) {
+        _solvingDetails.add('Make blank to ' + (isTargetLeft ? 'left' : 'right') + ' of $targetPiece');
+        movePiece = preferredMove;
+      } else if (_isSafeSlide(target: target, proposed: alternateMove) && alternateMove != _blank) {
+        _solvingDetails.add('Make blank above $targetPiece');
+        movePiece = alternateMove;
+      } else {
+        _solvingDetails.add('Make blank below $targetPiece');
+        movePiece = _newMove(y: location.y + 1);
+      }
     }
 
-    await _autoMove(movePiece);
+    return movePiece;
   }
 
   /// Shuffles the board and starts a new game
-  Future<void> randomize() async {
+  Future<void> startGame() async {
     final random = Random();
 
     _gameState = GameState.randomizing;
+    _stopwatch.reset();
+    _numberOfMoves = 0;
 
     for (int i = 0; i < 40; i++) {
       int next = random.nextInt(4);
@@ -400,7 +545,9 @@ class GameEngine extends ChangeNotifier {
       );
     }
 
+    _stopwatch.start();
     _gameState = GameState.activeGame;
+
     notifyListeners();
   }
 }

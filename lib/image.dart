@@ -2,7 +2,6 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 
 import 'settings.dart';
 
@@ -11,14 +10,14 @@ class ImageFromSource extends StatelessWidget {
   const ImageFromSource({
     Key? key,
     required this.width,
+    required this.settings,
   }) : super(key: key);
 
   final double width;
+  final Settings settings;
 
   @override
   Widget build(BuildContext context) {
-    final settings = context.watch<Settings>();
-
     if (settings.hasImageFile) {
       if (kIsWeb) {
         assert(settings.imageFileBytes != null);
