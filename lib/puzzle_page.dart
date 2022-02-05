@@ -2,6 +2,7 @@ import 'dart:math';
 
 import 'package:assets_audio_player/assets_audio_player.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_15/coord.dart';
 import 'package:flutter_15/image.dart';
 import 'package:flutter_15/settings.dart';
 
@@ -123,11 +124,50 @@ class _FlutterPuzzlePageState extends State<FlutterPuzzlePage> {
     _gameEngine.gameState = GameState.activeGame;
   }
 
-  _onDragStart() {}
+  Offset _cumulativeDrag = const Offset(0, 0);
+  bool _hasSlid = false;
+  _onDragStart(Coordinate square, DragStartDetails details) {
+    print('start $details');
+    _hasSlid = false;
+  }
 
-  _onDragUpdate() {}
+  _onDragUpdate(Coordinate square, DragUpdateDetails details) {
+    print('update $details');
+    _cumulativeDrag += details.delta;
+    _checkMove(square);
+  }
 
-  _onDragEnd() {}
+  _onDragEnd(Coordinate square, DragEndDetails details) {
+    print('end $details');
+    setState(() {
+      _cumulativeDrag = const Offset(0, 0);
+      _hasSlid = false;
+    });
+  }
+
+  _checkMove(Coordinate square) {
+    if (_hasSlid) {
+      return;
+    }
+
+    double delta = 0;
+    if (_gameEngine.canSlideHorizontally(square)) {
+      if (square.isRightOf(_gameEngine.blank)) {
+        delta = -_cumulativeDrag.dx;
+      } else {
+        delta = _cumulativeDrag.dx;
+      }
+    } else if (square.isAbove(_gameEngine.blank)) {
+      delta = _cumulativeDrag.dy;
+    } else {
+      delta = -_cumulativeDrag.dy;
+    }
+
+    if (delta > 5) {
+      _hasSlid = true;
+      _gameEngine.move(square);
+    }
+  }
 
   VoidCallback? _getFabAction() {
     switch (_gameEngine.gameState) {
@@ -305,9 +345,34 @@ class _FlutterPuzzlePageState extends State<FlutterPuzzlePage> {
                         : () {
                             _gameEngine.move(key);
                           },
-                    onHorizontalDragUpdate: widget.settings.isSliding
+                    onHorizontalDragStart: _gameEngine.canSlideHorizontally(key)
                         ? (details) {
-                            _gameEngine.move(key);
+                            _onDragStart(key, details);
+                          }
+                        : null,
+                    onHorizontalDragUpdate: _gameEngine.canSlideHorizontally(key)
+                        ? (details) {
+                            _onDragUpdate(key, details);
+                          }
+                        : null,
+                    onHorizontalDragEnd: _gameEngine.canSlideHorizontally(key)
+                        ? (details) {
+                            _onDragEnd(key, details);
+                          }
+                        : null,
+                    onVerticalDragStart: _gameEngine.canSlideVertically(key)
+                        ? (details) {
+                            _onDragStart(key, details);
+                          }
+                        : null,
+                    onVerticalDragUpdate: _gameEngine.canSlideVertically(key)
+                        ? (details) {
+                            _onDragUpdate(key, details);
+                          }
+                        : null,
+                    onVerticalDragEnd: _gameEngine.canSlideVertically(key)
+                        ? (details) {
+                            _onDragEnd(key, details);
                           }
                         : null,
                     child: PuzzlePiece(

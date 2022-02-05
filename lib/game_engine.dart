@@ -73,6 +73,24 @@ class GameEngine extends ChangeNotifier {
   List<String> get solvingDetails => _solvingDetails;
   final List<String> _solvingDetails = [];
 
+  /// Whether the square can slide horizontally.
+  bool canSlideHorizontally(Coordinate square) {
+    if (!settings.isSliding || square == _blank) {
+      return false;
+    }
+
+    return square.isSameRow(_blank);
+  }
+
+  /// Whether the square can slide horizontally.
+  bool canSlideVertically(Coordinate square) {
+    if (!settings.isSliding || square == _blank) {
+      return false;
+    }
+
+    return square.isSameColumn(_blank);
+  }
+
   /// Whether the proposed slide is safe.
   ///
   /// This assumes that the current puzzle is solved above and to the right of target.  Sometimes a proposed
