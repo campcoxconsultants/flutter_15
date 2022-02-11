@@ -329,8 +329,6 @@ class _FlutterPuzzlePageState extends State<FlutterPuzzlePage> {
   }
 
   Center _buildPuzzleStack(double width) {
-    print('dec ${_gameEngine.puzzle.keys}');
-
     return Center(
       child: Container(
         width: width * widget.settings.puzzleWidth,
@@ -398,7 +396,8 @@ class _FlutterPuzzlePageState extends State<FlutterPuzzlePage> {
                   opacity: _gameEngine.gameState == GameState.gameWon ? 1.0 : 0.0,
                   duration: const Duration(milliseconds: 500),
                   child: ImageFromSource(
-                    width: width * 4,
+                    width: width * widget.settings.puzzleWidth,
+                    height: width * widget.settings.puzzleHeight,
                     settings: widget.settings,
                   ),
                 ),

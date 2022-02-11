@@ -16,18 +16,13 @@ class PuzzlePiece extends StatelessWidget {
   final bool usePhoto;
   final Settings settings;
 
-  double _getAlign(int value) {
-    switch (value) {
-      case 0:
-        return -1;
-      case 1:
-        return -1 / 3;
-      case 2:
-        return 1 / 3;
-      case 3:
-        return 1;
-      default:
-        return 2;
+  double _getAlign(int value, int numberOfSquares) {
+    final percentage = value.toDouble() / (numberOfSquares - 1);
+
+    if (percentage < 0.5) {
+      return -1 + 2 * percentage;
+    } else {
+      return 1 - 2 * (1 - percentage);
     }
   }
 
@@ -57,14 +52,18 @@ class PuzzlePiece extends StatelessWidget {
 
     return ClipRect(
       child: Align(
-        alignment: Alignment(_getAlign((value! - 1) % 4), _getAlign((value! - 1) ~/ 4)),
-        heightFactor: 0.25,
-        widthFactor: 0.25,
+        alignment: Alignment(
+          _getAlign((value! - 1) % settings.puzzleWidth, settings.puzzleWidth),
+          _getAlign((value! - 1) ~/ settings.puzzleWidth, settings.puzzleHeight),
+        ),
+        heightFactor: 1 / settings.puzzleHeight,
+        widthFactor: 1 / settings.puzzleWidth,
         child: SizedBox(
-          width: size * 4,
-          height: size * 4,
+          width: size * settings.puzzleWidth,
+          height: size * settings.puzzleHeight,
           child: ImageFromSource(
-            width: size * 4,
+            width: size * settings.puzzleWidth,
+            height: size * settings.puzzleHeight,
             settings: settings,
           ),
         ),

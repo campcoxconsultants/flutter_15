@@ -10,9 +10,11 @@ class ImageFromSource extends StatelessWidget {
   const ImageFromSource({
     Key? key,
     required this.width,
+    required this.height,
     required this.settings,
   }) : super(key: key);
 
+  final double height;
   final double width;
   final Settings settings;
 
@@ -24,7 +26,7 @@ class ImageFromSource extends StatelessWidget {
         return Image.memory(
           settings.imageFileBytes!,
           width: width,
-          height: width,
+          height: height,
           fit: BoxFit.cover,
         );
       } else {
@@ -32,7 +34,7 @@ class ImageFromSource extends StatelessWidget {
         return Image.file(
           File(settings.imageFilePath!),
           width: width,
-          height: width,
+          height: height,
           fit: BoxFit.cover,
         );
       }
@@ -42,7 +44,7 @@ class ImageFromSource extends StatelessWidget {
     return Image.asset(
       'assets/family.jpg',
       width: width,
-      height: width,
+      height: height,
       fit: BoxFit.cover,
     );
   }

@@ -185,66 +185,54 @@ class GameEngine extends ChangeNotifier {
   Future<void> solutionMove() async {
     _gameState = GameState.autoSolving;
 
-    _solvingHeadline = 'Solving Tile 1';
-    await _solveTarget(piece: 1, target: const Coordinate(x: 0, y: 0));
-    _solvingHeadline = 'Solving Tile 2';
-    await _solveTarget(piece: 2, target: const Coordinate(x: 1, y: 0));
-    _solvingHeadline = 'Solving Tile 3';
-    await _solveTarget(piece: 3, target: const Coordinate(x: 2, y: 0));
-    _solvingHeadline = 'Solving Tile 4';
-    await _solveTarget(piece: 4, target: const Coordinate(x: 3, y: 0));
-    _solvingHeadline = 'Solving Tile 5';
-    await _solveTarget(piece: 5, target: const Coordinate(x: 0, y: 1));
-    _solvingHeadline = 'Solving Tile 6';
-    await _solveTarget(piece: 6, target: const Coordinate(x: 1, y: 1));
-    _solvingHeadline = 'Solving Tile 7';
-    await _solveTarget(piece: 7, target: const Coordinate(x: 2, y: 1));
-    _solvingHeadline = 'Solving Tile 8';
-    await _solveTarget(piece: 8, target: const Coordinate(x: 3, y: 1));
+    // For everything above the last two rows we just solve each target
+    for (int y = 0; y < currentHeight - 2; y++) {
+      for (int x = 0; x < currentWidth; x++) {
+        int piece = _getSolvedTile(x: x, y: y)!;
+        _solvingHeadline = 'Solving Tile ${piece}';
 
-    // if 9 & 13 are not already in place, solve them next to each other
-    if (_puzzle[const Coordinate(x: 0, y: 2)] != 9 || _puzzle[const Coordinate(x: 0, y: 3)] != 13) {
-      _solvingHeadline = "Moving Tile 13 to 9's Square";
-      await _solveTarget(piece: 13, target: const Coordinate(x: 0, y: 2));
-
-      // Case where 9 and 13 are in opposite order
-      if (_puzzle[const Coordinate(x: 0, y: 3)] == 9 ||
-          (_blank == const Coordinate(x: 0, y: 3) && _puzzle[const Coordinate(x: 1, y: 3)] == 9)) {
-        _solvingHeadline = 'Solving 9 and 13';
-        await _unhideCorner(target: const Coordinate(x: 0, y: 3));
-      } else {
-        _solvingHeadline = "Moving Tile 9 to 10's Square";
-        await _solveTarget(piece: 9, target: const Coordinate(x: 1, y: 2));
-
-        _solvingHeadline = 'Solving 9 and 13';
-        await _rotateBottomStart(target: const Coordinate(x: 0, y: 2));
+        await _solveTarget(piece: piece, target: Coordinate(x: x, y: y));
       }
     }
 
-    // if 10 & 14 are not already in place, solve them next to each other
-    if (_puzzle[const Coordinate(x: 1, y: 2)] != 10 || _puzzle[const Coordinate(x: 1, y: 3)] != 14) {
-      _solvingHeadline = "Moving Tile 14 to 10's Square";
-      await _solveTarget(piece: 14, target: const Coordinate(x: 1, y: 2));
-      // Case where 10 and 14 are in opposite order
-      if (_puzzle[const Coordinate(x: 1, y: 3)] == 10 ||
-          (_blank == const Coordinate(x: 1, y: 3) && _puzzle[const Coordinate(x: 2, y: 3)] == 10)) {
-        _solvingHeadline = "Solving 10 and 14";
-        await _unhideCorner(target: const Coordinate(x: 1, y: 3));
-      } else {
-        _solvingHeadline = "Moving Tile 10 to 11's Square";
-        await _solveTarget(piece: 10, target: const Coordinate(x: 2, y: 2));
+    // We work on the last two rows solving each left to right until
+    // we get to the final two columns
+    for (int x = 0; x < currentWidth - 2; x++) {
+      final topTile = _getSolvedTile(x: x, y: currentHeight - 2)!;
+      final bottomTile = _getSolvedTile(x: x, y: currentHeight - 1)!;
 
-        _solvingHeadline = 'Solving 10 and 14';
-        await _rotateBottomStart(target: const Coordinate(x: 1, y: 2));
+      if (_puzzle[Coordinate(x: x, y: currentHeight - 2)] == topTile &&
+          _puzzle[Coordinate(x: x, y: currentHeight - 1)] != bottomTile) {
+        // already solved
+        continue;
+      }
+
+      _solvingHeadline = "Moving Tile $bottomTile to $topTile's Square";
+      await _solveTarget(piece: bottomTile, target: Coordinate(x: x, y: currentHeight - 2));
+
+      // Case where top and bottom are in opposite order
+      if (_puzzle[Coordinate(x: x, y: currentHeight - 1)] == topTile ||
+          (_blank == Coordinate(x: x, y: currentHeight - 1) &&
+              _puzzle[Coordinate(x: x + 1, y: currentHeight - 1)] == topTile)) {
+        _solvingHeadline = 'Solving $topTile and $bottomTile';
+        await _unhideCorner(target: Coordinate(x: x, y: currentHeight - 1));
+      } else {
+        _solvingHeadline = "Moving Tile $topTile to ${topTile + 1}'s Square";
+        await _solveTarget(piece: topTile, target: Coordinate(x: x + 1, y: currentHeight - 2));
+
+        _solvingHeadline = 'Solving $topTile and $bottomTile';
+        await _rotateBottomStart(target: Coordinate(x: x, y: currentHeight - 2));
       }
     }
 
-    _solvingHeadline = 'Solving Tile 11';
-    await _solveTarget(piece: 11, target: const Coordinate(x: 2, y: 2));
-    _solvingHeadline = 'Solving Tile 12';
-    await _solveTarget(piece: 12, target: const Coordinate(x: 3, y: 2));
-    _solvingHeadline = 'Solving Tile 15';
-    await _solveTarget(piece: 15, target: const Coordinate(x: 2, y: 3));
+    // Solve the last three tiles
+    final nextTile = _getSolvedTile(x: currentWidth - 2, y: currentHeight - 2)!;
+    _solvingHeadline = 'Solving Tile $nextTile';
+    await _solveTarget(piece: nextTile, target: Coordinate(x: currentWidth - 2, y: currentHeight - 2));
+    _solvingHeadline = 'Solving Tile ${nextTile + 1}';
+    await _solveTarget(piece: nextTile + 1, target: Coordinate(x: currentWidth - 1, y: currentHeight - 2));
+    _solvingHeadline = 'Solving Tile ${nextTile + currentWidth}';
+    await _solveTarget(piece: nextTile + currentWidth, target: Coordinate(x: currentWidth - 2, y: currentHeight - 1));
   }
 
   /// Generates 0 or more automatic moves until the piece
@@ -554,7 +542,7 @@ class GameEngine extends ChangeNotifier {
     _stopwatch.reset();
     _numberOfMoves = 0;
 
-    for (int i = 0; i < 41; i++) {
+    for (int i = 0; i < 2 * settings.puzzleHeight * settings.puzzleWidth; i++) {
       int next = random.nextInt(settings.puzzleWidth);
       while (next == _blank.x) {
         next = random.nextInt(settings.puzzleWidth);

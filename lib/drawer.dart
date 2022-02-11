@@ -68,6 +68,7 @@ class _PuzzleDrawerState extends State<PuzzleDrawer> {
             title: const Text('Select Photo'),
             trailing: ImageFromSource(
               width: 50,
+              height: 50 * widget.settings.puzzleHeight / widget.settings.puzzleWidth,
               settings: widget.settings,
             ),
             onTap: () {
