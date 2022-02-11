@@ -4,45 +4,47 @@ import 'package:flutter/foundation.dart';
 
 import 'coord.dart';
 import 'settings.dart';
-import 'square.dart';
 
 // TODO: Teaching mode
 /// Handles the business logic of the game.
 class GameEngine extends ChangeNotifier {
   /// Represents the state of a completed puzzle.
-  static final _completedPuzzle = {
-    Square.one.coordinate: 1,
-    Square.two.coordinate: 2,
-    Square.three.coordinate: 3,
-    Square.four.coordinate: 4,
-    Square.five.coordinate: 5,
-    Square.six.coordinate: 6,
-    Square.seven.coordinate: 7,
-    Square.eight.coordinate: 8,
-    Square.nine.coordinate: 9,
-    Square.ten.coordinate: 10,
-    Square.eleven.coordinate: 11,
-    Square.twelve.coordinate: 12,
-    Square.thirteen.coordinate: 13,
-    Square.fourteen.coordinate: 14,
-    Square.fifteen.coordinate: 15,
-    Square.sixteen.coordinate: null,
-  };
+  final Map<Coordinate, int?> _completedPuzzle = {};
 
-  GameEngine({required this.settings}) : _puzzle = Map<Coordinate, int?>.from(_completedPuzzle);
+  GameEngine({required this.settings}) {
+    initializePuzzle();
+  }
+
+  void initializePuzzle() {
+    currentWidth = settings.puzzleWidth;
+    currentHeight = settings.puzzleHeight;
+
+    _completedPuzzle.clear();
+    for (int x = 0; x < settings.puzzleWidth; x++) {
+      for (int y = 0; y < settings.puzzleHeight; y++) {
+        _completedPuzzle[Coordinate(x: x, y: y)] = _getSolvedTile(x: x, y: y);
+      }
+    }
+
+    _puzzle = Map<Coordinate, int?>.from(_completedPuzzle);
+    _blank = Coordinate(x: currentWidth - 1, y: currentHeight - 1);
+    _gameState = GameState.initial;
+  }
 
   final Settings settings;
+  late int currentWidth;
+  late int currentHeight;
 
   /// Represents the current state of the puzzle.
   ///
   /// Each [Coordinate] maps to the number shown in that square.
   /// The blank square maps to null.
   Map<Coordinate, int?> get puzzle => _puzzle;
-  final Map<Coordinate, int?> _puzzle;
+  late Map<Coordinate, int?> _puzzle;
 
   /// Tracks the blank location.
   Coordinate get blank => _blank;
-  Coordinate _blank = Square.sixteen.coordinate;
+  late Coordinate _blank = Coordinate(x: settings.puzzleWidth - 1, y: settings.puzzleHeight - 1);
 
   /// Current state of the game
   GameState get gameState => _gameState;
@@ -54,8 +56,6 @@ class GameEngine extends ChangeNotifier {
   GameState _gameState = GameState.initial;
 
   /// Number of moves in current game
-  ///
-  /// This is not valid for initial and randomizing.
   int get numberOfMoves => _numberOfMoves;
   int _numberOfMoves = 0;
 
@@ -98,19 +98,28 @@ class GameEngine extends ChangeNotifier {
   bool _isSafeSlide({required Coordinate target, required Coordinate proposed}) =>
       (proposed.y > target.y || proposed.x >= target.x) &&
       proposed.y >= 0 &&
-      proposed.y < 4 &&
+      proposed.y < settings.puzzleHeight &&
       proposed.x >= 0 &&
-      proposed.x < 4;
+      proposed.x < settings.puzzleWidth;
 
   /// Generates a new coordinate to be used in a move.
   ///
   /// Should be passed exactly one value since the other must be blank to be a legal move.
   Coordinate _newMove({int? x, int? y}) => Coordinate(x: x ?? _blank.x, y: y ?? _blank.y);
 
+  /// Returns value for tile of a solved puzzle.
+  int? _getSolvedTile({required int x, required int y}) {
+    if (x == settings.puzzleWidth - 1 && y == settings.puzzleHeight - 1) {
+      return null;
+    }
+
+    return 1 + x + settings.puzzleWidth * y;
+  }
+
   /// Slides one or more tiles towards [_blank]
   void move(Coordinate pushedPiece, {auto = false}) async {
-    assert(pushedPiece.x >= 0 && pushedPiece.x < 4);
-    assert(pushedPiece.y >= 0 && pushedPiece.y < 4);
+    assert(pushedPiece.x >= 0 && pushedPiece.x < settings.puzzleWidth);
+    assert(pushedPiece.y >= 0 && pushedPiece.y < settings.puzzleHeight);
 
     if (pushedPiece == _blank || (!pushedPiece.isSameColumn(_blank) && !pushedPiece.isSameRow(_blank))) {
       return;
@@ -177,65 +186,65 @@ class GameEngine extends ChangeNotifier {
     _gameState = GameState.autoSolving;
 
     _solvingHeadline = 'Solving Tile 1';
-    await _solveTarget(piece: 1, target: Square.one.coordinate);
+    await _solveTarget(piece: 1, target: const Coordinate(x: 0, y: 0));
     _solvingHeadline = 'Solving Tile 2';
-    await _solveTarget(piece: 2, target: Square.two.coordinate);
+    await _solveTarget(piece: 2, target: const Coordinate(x: 1, y: 0));
     _solvingHeadline = 'Solving Tile 3';
-    await _solveTarget(piece: 3, target: Square.three.coordinate);
+    await _solveTarget(piece: 3, target: const Coordinate(x: 2, y: 0));
     _solvingHeadline = 'Solving Tile 4';
-    await _solveTarget(piece: 4, target: Square.four.coordinate);
+    await _solveTarget(piece: 4, target: const Coordinate(x: 3, y: 0));
     _solvingHeadline = 'Solving Tile 5';
-    await _solveTarget(piece: 5, target: Square.five.coordinate);
+    await _solveTarget(piece: 5, target: const Coordinate(x: 0, y: 1));
     _solvingHeadline = 'Solving Tile 6';
-    await _solveTarget(piece: 6, target: Square.six.coordinate);
+    await _solveTarget(piece: 6, target: const Coordinate(x: 1, y: 1));
     _solvingHeadline = 'Solving Tile 7';
-    await _solveTarget(piece: 7, target: Square.seven.coordinate);
+    await _solveTarget(piece: 7, target: const Coordinate(x: 2, y: 1));
     _solvingHeadline = 'Solving Tile 8';
-    await _solveTarget(piece: 8, target: Square.eight.coordinate);
+    await _solveTarget(piece: 8, target: const Coordinate(x: 3, y: 1));
 
     // if 9 & 13 are not already in place, solve them next to each other
-    if (_puzzle[Square.nine.coordinate] != 9 || _puzzle[Square.thirteen.coordinate] != 13) {
+    if (_puzzle[const Coordinate(x: 0, y: 2)] != 9 || _puzzle[const Coordinate(x: 0, y: 3)] != 13) {
       _solvingHeadline = "Moving Tile 13 to 9's Square";
-      await _solveTarget(piece: 13, target: Square.nine.coordinate);
+      await _solveTarget(piece: 13, target: const Coordinate(x: 0, y: 2));
 
       // Case where 9 and 13 are in opposite order
-      if (_puzzle[Square.thirteen.coordinate] == 9 ||
-          (_blank == Square.thirteen.coordinate && _puzzle[Square.fourteen.coordinate] == 9)) {
+      if (_puzzle[const Coordinate(x: 0, y: 3)] == 9 ||
+          (_blank == const Coordinate(x: 0, y: 3) && _puzzle[const Coordinate(x: 1, y: 3)] == 9)) {
         _solvingHeadline = 'Solving 9 and 13';
-        await _unhideCorner(target: Square.thirteen.coordinate);
+        await _unhideCorner(target: const Coordinate(x: 0, y: 3));
       } else {
         _solvingHeadline = "Moving Tile 9 to 10's Square";
-        await _solveTarget(piece: 9, target: Square.ten.coordinate);
+        await _solveTarget(piece: 9, target: const Coordinate(x: 1, y: 2));
 
         _solvingHeadline = 'Solving 9 and 13';
-        await _rotateBottomStart(target: Square.nine.coordinate);
+        await _rotateBottomStart(target: const Coordinate(x: 0, y: 2));
       }
     }
 
     // if 10 & 14 are not already in place, solve them next to each other
-    if (_puzzle[Square.ten.coordinate] != 10 || _puzzle[Square.fourteen.coordinate] != 14) {
+    if (_puzzle[const Coordinate(x: 1, y: 2)] != 10 || _puzzle[const Coordinate(x: 1, y: 3)] != 14) {
       _solvingHeadline = "Moving Tile 14 to 10's Square";
-      await _solveTarget(piece: 14, target: Square.ten.coordinate);
+      await _solveTarget(piece: 14, target: const Coordinate(x: 1, y: 2));
       // Case where 10 and 14 are in opposite order
-      if (_puzzle[Square.fourteen.coordinate] == 10 ||
-          (_blank == Square.fourteen.coordinate && _puzzle[Square.fifteen.coordinate] == 10)) {
+      if (_puzzle[const Coordinate(x: 1, y: 3)] == 10 ||
+          (_blank == const Coordinate(x: 1, y: 3) && _puzzle[const Coordinate(x: 2, y: 3)] == 10)) {
         _solvingHeadline = "Solving 10 and 14";
-        await _unhideCorner(target: Square.fourteen.coordinate);
+        await _unhideCorner(target: const Coordinate(x: 1, y: 3));
       } else {
         _solvingHeadline = "Moving Tile 10 to 11's Square";
-        await _solveTarget(piece: 10, target: Square.eleven.coordinate);
+        await _solveTarget(piece: 10, target: const Coordinate(x: 2, y: 2));
 
         _solvingHeadline = 'Solving 10 and 14';
-        await _rotateBottomStart(target: Square.ten.coordinate);
+        await _rotateBottomStart(target: const Coordinate(x: 1, y: 2));
       }
     }
 
     _solvingHeadline = 'Solving Tile 11';
-    await _solveTarget(piece: 11, target: Square.eleven.coordinate);
+    await _solveTarget(piece: 11, target: const Coordinate(x: 2, y: 2));
     _solvingHeadline = 'Solving Tile 12';
-    await _solveTarget(piece: 12, target: Square.twelve.coordinate);
+    await _solveTarget(piece: 12, target: const Coordinate(x: 3, y: 2));
     _solvingHeadline = 'Solving Tile 15';
-    await _solveTarget(piece: 15, target: Square.fifteen.coordinate);
+    await _solveTarget(piece: 15, target: const Coordinate(x: 2, y: 3));
   }
 
   /// Generates 0 or more automatic moves until the piece
@@ -469,7 +478,9 @@ class GameEngine extends ChangeNotifier {
 
     if (_blank.compare(isSameColumn: location, isAbove: location)) {
       movePiece = _newMove(y: location.y);
-    } else if (location.x == 3 && _blank != target && location == target + const Coordinate(x: 0, y: 1)) {
+    } else if (location.x == settings.puzzleWidth - 1 &&
+        _blank != target &&
+        location == target + const Coordinate(x: 0, y: 1)) {
       await _rotateEnd(target);
       return null;
     } else if (_blank.compare(isAbove: location)) {
@@ -477,7 +488,7 @@ class GameEngine extends ChangeNotifier {
       movePiece = _newMove(x: location.x);
     } else if (_blank.compare(isSameColumn: location)) {
       _solvingDetails.add('Move blank around $targetPiece');
-      movePiece = _newMove(x: location.x == 3 ? 2 : location.x + 1);
+      movePiece = _newMove(x: location.x == settings.puzzleWidth - 1 ? location.x - 1 : location.x + 1);
     } else if (_blank.compare(isRightOf: location) || (location.y - 1 > target.y || _blank.x > target.x)) {
       _solvingDetails.add('Move blank to row above $targetPiece');
       movePiece = _newMove(y: location.y - 1);
@@ -486,7 +497,7 @@ class GameEngine extends ChangeNotifier {
       movePiece = _newMove(y: location.y + 1);
     } else {
       _solvingDetails.add('Move blank around $targetPiece');
-      movePiece = _newMove(x: location.x == 3 ? 2 : location.x + 1);
+      movePiece = _newMove(x: location.x == settings.puzzleWidth - 1 ? location.x - 1 : location.x + 1);
     }
     return movePiece;
   }
@@ -543,19 +554,19 @@ class GameEngine extends ChangeNotifier {
     _stopwatch.reset();
     _numberOfMoves = 0;
 
-    for (int i = 0; i < 40; i++) {
-      int next = random.nextInt(4);
+    for (int i = 0; i < 41; i++) {
+      int next = random.nextInt(settings.puzzleWidth);
       while (next == _blank.x) {
-        next = random.nextInt(4);
+        next = random.nextInt(settings.puzzleWidth);
       }
       await _autoMove(
         _newMove(x: next),
         duration: const Duration(milliseconds: 50),
       );
 
-      next = random.nextInt(4);
+      next = random.nextInt(settings.puzzleHeight);
       while (next == _blank.y) {
-        next = random.nextInt(4);
+        next = random.nextInt(settings.puzzleHeight);
       }
       await _autoMove(
         _newMove(y: next),

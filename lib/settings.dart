@@ -16,21 +16,19 @@ class Settings extends ChangeNotifier {
   static const isTeachingModeKey = 'teachingMode';
   static const isPlayingSoundsKey = 'playSounds';
   static const isShowingStatusKey = "showStatus";
+  static const puzzleWidthKey = "width";
+  static const puzzleHeightKey = "height";
 
-  Settings() {
-    _localStorage.ready.then(
-      (isSuccessful) {
-        if (isSuccessful) {
-          _loadSettings();
-        }
-      },
-    );
+  static Future<Settings> load() async {
+    final settings = Settings();
+
+    await settings._localStorage.ready;
+    settings._loadSettings();
+
+    return settings;
   }
 
   final LocalStorage _localStorage = LocalStorage(localStorageKey);
-
-  /// Whether the local storage is initialized and loaded
-  bool _hasLocalStorage = false;
 
   /// Whether there is a custom picture file
   bool get hasImageFile => _imageFilePath != null || _imageFileBytes != null;
@@ -80,6 +78,32 @@ class Settings extends ChangeNotifier {
   }
 
   int _moveSpeed = 2;
+
+  /// Number of squares the puzzle is wide
+  int get puzzleWidth => _puzzleWidth;
+  set puzzleWidth(int newWidth) {
+    _puzzleWidth = newWidth;
+    _saveSetting(
+      key: puzzleWidthKey,
+      value: newWidth,
+    );
+    notifyListeners();
+  }
+
+  int _puzzleWidth = 4;
+
+  /// Number of squares the puzzle is wide
+  int get puzzleHeight => _puzzleHeight;
+  set puzzleHeight(int newHeight) {
+    _puzzleHeight = newHeight;
+    _saveSetting(
+      key: puzzleHeightKey,
+      value: newHeight,
+    );
+    notifyListeners();
+  }
+
+  int _puzzleHeight = 4;
 
   /// Whether sounds should be played
   bool get isPlayingSounds => _isPlayingSounds;
@@ -143,9 +167,12 @@ class Settings extends ChangeNotifier {
   /// Loads all settings with defaults upon app start.
   void _loadSettings() {
     _isPlayingSounds = _localStorage.getItem(isPlayingSoundsKey) ?? true;
-    _isTeachingMode = _localStorage.getItem(isTeachingModeKey) ?? false;
+    _isTeachingMode = _localStorage.getItem(isTeachingModeKey) ?? true;
     _isShowingStatus = _localStorage.getItem(isShowingStatusKey) ?? true;
+    _isSliding = _localStorage.getItem(isSlidingKey) ?? true;
     _moveSpeed = _localStorage.getItem(moveSpeedKey) ?? 2;
+    _puzzleHeight = _localStorage.getItem(puzzleHeightKey) ?? 4;
+    _puzzleWidth = _localStorage.getItem(puzzleWidthKey) ?? 4;
 
     _imageFilePath = _localStorage.getItem(imageFilePathKey);
 
@@ -155,18 +182,10 @@ class Settings extends ChangeNotifier {
     if (dynamicImageBytes != null) {
       _imageFileBytes = Uint8List.fromList(dynamicImageBytes.map((e) => e as int).toList());
     }
-
-    _hasLocalStorage = true;
-
-    notifyListeners();
   }
 
   /// Saves an individual setting.
   void _saveSetting({required String key, required dynamic value}) {
-    if (!_hasLocalStorage) {
-      return;
-    }
-
     try {
       _localStorage.setItem(key, value);
     } catch (error) {

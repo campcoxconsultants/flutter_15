@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import 'puzzle_page.dart';
 import 'settings.dart';
 
-void main() {
+late Settings _settings;
+void main() async {
+  _settings = await Settings.load();
   runApp(const MyApp());
 }
 
@@ -15,7 +17,6 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  final settings = Settings();
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -23,7 +24,7 @@ class _MyAppState extends State<MyApp> {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: FlutterPuzzlePage(title: 'Flutter 15 Puzzle', settings: settings),
+      home: FlutterPuzzlePage(title: 'Flutter 15 Puzzle', settings: _settings),
     );
   }
 }

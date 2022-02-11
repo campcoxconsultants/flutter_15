@@ -26,7 +26,8 @@ class FlutterPuzzlePage extends StatefulWidget {
 }
 
 class _FlutterPuzzlePageState extends State<FlutterPuzzlePage> {
-  static const sideDisplaySize = 275.0;
+  static const _sideDisplaySize = 300.0;
+  static const _verticalDisplaySize = 100.0;
 
   /// Whether the image is a picture vs the numbers
   bool _isPhoto = false;
@@ -77,6 +78,10 @@ class _FlutterPuzzlePageState extends State<FlutterPuzzlePage> {
   }
 
   void _settingsListener() {
+    if (widget.settings.puzzleWidth != _gameEngine.currentWidth ||
+        widget.settings.puzzleHeight != _gameEngine.currentHeight) {
+      _gameEngine.initializePuzzle();
+    }
     setState(() {});
   }
 
@@ -127,18 +132,15 @@ class _FlutterPuzzlePageState extends State<FlutterPuzzlePage> {
   Offset _cumulativeDrag = const Offset(0, 0);
   bool _hasSlid = false;
   _onDragStart(Coordinate square, DragStartDetails details) {
-    print('start $details');
     _hasSlid = false;
   }
 
   _onDragUpdate(Coordinate square, DragUpdateDetails details) {
-    print('update $details');
     _cumulativeDrag += details.delta;
     _checkMove(square);
   }
 
   _onDragEnd(Coordinate square, DragEndDetails details) {
-    print('end $details');
     setState(() {
       _cumulativeDrag = const Offset(0, 0);
       _hasSlid = false;
@@ -238,19 +240,26 @@ class _FlutterPuzzlePageState extends State<FlutterPuzzlePage> {
       // TODO: Teaching mode
       body: LayoutBuilder(
         builder: (_, BoxConstraints constraints) {
-          final spaceNeeded =
-              widget.settings.isShowingStatus || widget.settings.isTeachingMode ? sideDisplaySize + 25 : 0;
+          // TODO: Explain the math
+          final portraitWidthConstraint = constraints.maxWidth / (widget.settings.puzzleWidth + 0.25);
+          final landscapeWidthConstraint = (constraints.maxWidth -
+                  (widget.settings.isShowingStatus || widget.settings.isTeachingMode ? _sideDisplaySize : 0)) /
+              (widget.settings.puzzleWidth + 0.25);
+          final portraitHeightConstraint =
+              (constraints.maxHeight - _verticalDisplaySize) / (widget.settings.puzzleHeight + 0.25);
+          final landscapeHeightConstraint = constraints.maxHeight / (widget.settings.puzzleHeight + 0.25);
+          final portraitSize = min(portraitWidthConstraint, portraitHeightConstraint);
+          final landscapeSize = min(landscapeWidthConstraint, landscapeHeightConstraint);
 
-          if (constraints.maxHeight < constraints.maxWidth - spaceNeeded) {
-            final size = constraints.maxHeight / 4.25;
+          if (landscapeSize > portraitSize) {
             return Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                _buildPuzzleStack(size),
+                _buildPuzzleStack(landscapeSize),
                 if (widget.settings.isShowingStatus || widget.settings.isTeachingMode)
                   SizedBox(
-                    width: sideDisplaySize,
+                    width: _sideDisplaySize,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -281,7 +290,6 @@ class _FlutterPuzzlePageState extends State<FlutterPuzzlePage> {
               ],
             );
           } else {
-            final size = (min(constraints.maxHeight, constraints.maxWidth) - 108) / 4.25;
             return Column(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               crossAxisAlignment: CrossAxisAlignment.center,
@@ -299,7 +307,7 @@ class _FlutterPuzzlePageState extends State<FlutterPuzzlePage> {
                     ),
                   ],
                 ),
-                _buildPuzzleStack(size),
+                _buildPuzzleStack(portraitSize),
                 Text(
                   _gameEngine.solvingHeadline ?? '',
                   style: Theme.of(context).textTheme.titleLarge,
@@ -321,11 +329,12 @@ class _FlutterPuzzlePageState extends State<FlutterPuzzlePage> {
   }
 
   Center _buildPuzzleStack(double width) {
-    // TODO: Ditch provider for Constructor injection
+    print('dec ${_gameEngine.puzzle.keys}');
+
     return Center(
       child: Container(
-        width: width * 4,
-        height: width * 4,
+        width: width * widget.settings.puzzleWidth,
+        height: width * widget.settings.puzzleHeight,
         decoration: BoxDecoration(
           border: Border.all(),
         ),

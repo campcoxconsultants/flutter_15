@@ -93,6 +93,43 @@ class _PuzzleDrawerState extends State<PuzzleDrawer> {
             ),
           ),
           ListTile(
+            title: Row(
+              children: [
+                const Text('Puzzle Width'),
+                Expanded(
+                  child: Slider.adaptive(
+                    value: widget.settings.puzzleWidth.toDouble(),
+                    min: 3,
+                    max: 6,
+                    divisions: 3,
+                    onChanged: (newValue) {
+                      widget.settings.puzzleWidth = newValue.toInt();
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+          ListTile(
+            title: Row(
+              children: [
+                const Text('Puzzle Height'),
+                Expanded(
+                  child: Slider.adaptive(
+                    value: widget.settings.puzzleHeight.toDouble(),
+                    label: widget.settings.puzzleHeight.toString(),
+                    min: 3,
+                    max: 6,
+                    divisions: 3,
+                    onChanged: (newValue) {
+                      widget.settings.puzzleHeight = newValue.toInt();
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+          ListTile(
             title: const Text('Play Sounds'),
             trailing: Checkbox(
               value: widget.settings.isPlayingSounds,
