@@ -5,7 +5,6 @@ import 'package:flutter/foundation.dart';
 import 'coord.dart';
 import 'settings.dart';
 
-// TODO: Teaching mode
 /// Handles the business logic of the game.
 class GameEngine extends ChangeNotifier {
   /// Represents the state of a completed puzzle.
@@ -189,8 +188,7 @@ class GameEngine extends ChangeNotifier {
     for (int y = 0; y < currentHeight - 2; y++) {
       for (int x = 0; x < currentWidth; x++) {
         int piece = _getSolvedTile(x: x, y: y)!;
-        _solvingHeadline = 'Solving Tile ${piece}';
-
+        _solvingHeadline = 'Solving Tile $piece';
         await _solveTarget(piece: piece, target: Coordinate(x: x, y: y));
       }
     }
@@ -200,13 +198,13 @@ class GameEngine extends ChangeNotifier {
     for (int x = 0; x < currentWidth - 2; x++) {
       final topTile = _getSolvedTile(x: x, y: currentHeight - 2)!;
       final bottomTile = _getSolvedTile(x: x, y: currentHeight - 1)!;
-
+      print('dec $topTile, $bottomTile');
       if (_puzzle[Coordinate(x: x, y: currentHeight - 2)] == topTile &&
-          _puzzle[Coordinate(x: x, y: currentHeight - 1)] != bottomTile) {
+          _puzzle[Coordinate(x: x, y: currentHeight - 1)] == bottomTile) {
         // already solved
         continue;
       }
-
+      print('dec after');
       _solvingHeadline = "Moving Tile $bottomTile to $topTile's Square";
       await _solveTarget(piece: bottomTile, target: Coordinate(x: x, y: currentHeight - 2));
 

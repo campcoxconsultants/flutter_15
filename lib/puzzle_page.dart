@@ -14,11 +14,9 @@ import 'puzzle_piece.dart';
 class FlutterPuzzlePage extends StatefulWidget {
   const FlutterPuzzlePage({
     Key? key,
-    required this.title,
     required this.settings,
   }) : super(key: key);
 
-  final String title;
   final Settings settings;
 
   @override
@@ -214,7 +212,7 @@ class _FlutterPuzzlePageState extends State<FlutterPuzzlePage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.title),
+        title: const Text('Super Slider'),
         actions: [
           IconButton(
             onPressed: () {
@@ -237,10 +235,8 @@ class _FlutterPuzzlePageState extends State<FlutterPuzzlePage> {
       drawer: PuzzleDrawer(
         settings: widget.settings,
       ),
-      // TODO: Teaching mode
       body: LayoutBuilder(
         builder: (_, BoxConstraints constraints) {
-          // TODO: Explain the math
           final portraitWidthConstraint = constraints.maxWidth / (widget.settings.puzzleWidth + 0.25);
           final landscapeWidthConstraint = (constraints.maxWidth -
                   (widget.settings.isShowingStatus || widget.settings.isTeachingMode ? _sideDisplaySize : 0)) /
@@ -308,14 +304,16 @@ class _FlutterPuzzlePageState extends State<FlutterPuzzlePage> {
                   ],
                 ),
                 _buildPuzzleStack(portraitSize),
-                Text(
-                  _gameEngine.solvingHeadline ?? '',
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-                Text(
-                  _gameEngine.solvingDetails.join('. '),
-                  style: Theme.of(context).textTheme.bodyMedium,
-                ),
+                if (widget.settings.isTeachingMode && _gameEngine.gameState == GameState.autoSolving) ...[
+                  Text(
+                    _gameEngine.solvingHeadline ?? '',
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                  Text(
+                    _gameEngine.solvingDetails.join('. '),
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                ],
               ],
             );
           }
@@ -346,7 +344,6 @@ class _FlutterPuzzlePageState extends State<FlutterPuzzlePage> {
                   left: key.x * width,
                   duration: _getAnimationDuration(),
                   child: GestureDetector(
-                    // TODO: allow for sliding pieces
                     onTap: widget.settings.isSliding
                         ? null
                         : () {

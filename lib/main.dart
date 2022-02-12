@@ -5,26 +5,17 @@ import 'settings.dart';
 
 late Settings _settings;
 void main() async {
+  // To avoid updating the board in rapid succession on startup
+  // we want the settings to be loaded before drawing it the first time.
   _settings = await Settings.load();
-  runApp(const MyApp());
-}
 
-class MyApp extends StatefulWidget {
-  const MyApp({Key? key}) : super(key: key);
-
-  @override
-  State<MyApp> createState() => _MyAppState();
-}
-
-class _MyAppState extends State<MyApp> {
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Flutter Puzzle Hack',
+  runApp(
+    MaterialApp(
+      title: 'Super Slider',
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: FlutterPuzzlePage(title: 'Flutter 15 Puzzle', settings: _settings),
-    );
-  }
+      home: FlutterPuzzlePage(settings: _settings),
+    ),
+  );
 }

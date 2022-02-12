@@ -162,6 +162,7 @@ class Settings extends ChangeNotifier {
     await _localStorage.clear();
 
     _loadSettings();
+    notifyListeners();
   }
 
   /// Loads all settings with defaults upon app start.
