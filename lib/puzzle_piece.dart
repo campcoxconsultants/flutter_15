@@ -44,7 +44,7 @@ class PuzzlePiece extends StatelessWidget {
         child: Center(
           child: Text(
             value != null ? '$value' : '',
-            style: TextStyle(fontSize: size * 0.8),
+            style: TextStyle(fontSize: size * 0.75),
           ),
         ),
       );

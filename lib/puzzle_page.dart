@@ -261,22 +261,31 @@ class _FlutterPuzzlePageState extends State<FlutterPuzzlePage> {
                       children: [
                         const Spacer(),
                         if (widget.settings.isShowingStatus)
-                          Text(
-                            'Time: $_elapsedTimeString'
-                            '\nMoves: ${_gameEngine.numberOfMoves}',
-                            style: Theme.of(context).textTheme.headlineLarge,
+                          SizedBox(
+                            height: 50,
+                            child: Text(
+                              'Time: $_elapsedTimeString'
+                              '\nMoves: ${_gameEngine.numberOfMoves}',
+                              style: Theme.of(context).textTheme.headlineLarge,
+                            ),
                           ),
                         const Spacer(
                           flex: 3,
                         ),
                         if (widget.settings.isTeachingMode && _gameEngine.gameState == GameState.autoSolving) ...[
-                          Text(
-                            _gameEngine.solvingHeadline ?? '',
-                            style: Theme.of(context).textTheme.titleLarge,
+                          SizedBox(
+                            height: 25,
+                            child: Text(
+                              _gameEngine.solvingHeadline ?? '',
+                              style: Theme.of(context).textTheme.titleLarge,
+                            ),
                           ),
-                          Text(
-                            _gameEngine.solvingDetails.join('\n'),
-                            style: Theme.of(context).textTheme.bodyLarge,
+                          SizedBox(
+                            height: 75,
+                            child: Text(
+                              _gameEngine.solvingDetails.join('\n'),
+                              style: Theme.of(context).textTheme.bodyLarge,
+                            ),
                           ),
                         ],
                         const Spacer(),
@@ -290,28 +299,37 @@ class _FlutterPuzzlePageState extends State<FlutterPuzzlePage> {
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    Text(
-                      'Time: $_elapsedTimeString',
-                      style: Theme.of(context).textTheme.headlineSmall,
-                    ),
-                    Text(
-                      'Moves: ${_gameEngine.numberOfMoves}',
-                      style: Theme.of(context).textTheme.headlineSmall,
-                    ),
-                  ],
+                SizedBox(
+                  height: 25,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      Text(
+                        'Time: $_elapsedTimeString',
+                        style: Theme.of(context).textTheme.headlineSmall,
+                      ),
+                      Text(
+                        'Moves: ${_gameEngine.numberOfMoves}',
+                        style: Theme.of(context).textTheme.headlineSmall,
+                      ),
+                    ],
+                  ),
                 ),
                 _buildPuzzleStack(portraitSize),
                 if (widget.settings.isTeachingMode && _gameEngine.gameState == GameState.autoSolving) ...[
-                  Text(
-                    _gameEngine.solvingHeadline ?? '',
-                    style: Theme.of(context).textTheme.titleLarge,
+                  SizedBox(
+                    height: 25,
+                    child: Text(
+                      _gameEngine.solvingHeadline ?? '',
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
                   ),
-                  Text(
-                    _gameEngine.solvingDetails.join('. '),
-                    style: Theme.of(context).textTheme.bodyMedium,
+                  SizedBox(
+                    height: 50,
+                    child: Text(
+                      _gameEngine.solvingDetails.join('. '),
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
                   ),
                 ],
               ],

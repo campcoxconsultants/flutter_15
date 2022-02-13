@@ -198,13 +198,12 @@ class GameEngine extends ChangeNotifier {
     for (int x = 0; x < currentWidth - 2; x++) {
       final topTile = _getSolvedTile(x: x, y: currentHeight - 2)!;
       final bottomTile = _getSolvedTile(x: x, y: currentHeight - 1)!;
-      print('dec $topTile, $bottomTile');
       if (_puzzle[Coordinate(x: x, y: currentHeight - 2)] == topTile &&
           _puzzle[Coordinate(x: x, y: currentHeight - 1)] == bottomTile) {
         // already solved
         continue;
       }
-      print('dec after');
+
       _solvingHeadline = "Moving Tile $bottomTile to $topTile's Square";
       await _solveTarget(piece: bottomTile, target: Coordinate(x: x, y: currentHeight - 2));
 
